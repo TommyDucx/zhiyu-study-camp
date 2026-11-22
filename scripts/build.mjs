@@ -63,6 +63,7 @@ async function main() {
 
   await mkdir(join(root, 'dist'), { recursive: true });
   await writeFile(join(root, 'dist/index.html'), html, 'utf8');
+  await writeFile(join(root, '知屿学习营地.html'), html, 'utf8');
   await writeFile(join(root, 'dist/.nojekyll'), '', 'utf8');
   await cp(join(root, 'docs'), join(root, 'dist/docs'), { recursive: true });
   await cp(join(root, 'assets'), join(root, 'dist/assets'), { recursive: true });
@@ -71,7 +72,7 @@ async function main() {
   }
 
   const kb = (Buffer.byteLength(html) / 1024).toFixed(1);
-  console.log(`Built dist/index.html (${kb} KB, fully self-contained).`);
+  console.log(`Built dist/index.html and 知屿学习营地.html (${kb} KB each, fully self-contained).`);
   console.log('Copied architecture docs to dist/docs for GitHub Pages.');
 }
 

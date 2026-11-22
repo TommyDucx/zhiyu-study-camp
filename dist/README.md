@@ -24,15 +24,21 @@
 
 ## 连接你的复习库
 
-1. 启动本地静态服务器：
+### 直接打开
+
+双击项目根目录的 [`知屿学习营地.html`](知屿学习营地.html)，或打开 [`dist/index.html`](dist/index.html)。这两个文件每次构建都会同步更新，内容完全相同，可以直接离线运行。
+
+也可以启动本地服务器开发调试：
 
 ```bash
 python3 -m http.server 8080
 # 打开 http://localhost:8080
 ```
 
-2. 进入「复习图鉴」，点击「连接资料库」。
-3. 选择包含 `语文 / 数学 / 物理 / 化学 / 生物` 的上级文件夹（例如整个 `高中校内`），或选择单个学科文件夹。
+### 连接目录
+
+1. 进入「复习图鉴」，点击「连接资料库」。
+2. 选择包含 `语文 / 数学 / 物理 / 化学 / 生物` 的上级文件夹（例如整个 `高中校内`），或选择单个学科文件夹。
 
 支持 Chrome / Edge 的目录权限持久化；再次打开只需恢复授权。Safari / Firefox 可点击目录栏的「导入」临时选择文件夹，刷新后需要重选，但通读记录会保留。
 
@@ -63,17 +69,18 @@ python3 -m http.server 8080
 
 ```bash
 npm test       # 23 条领域、仓储、目录索引测试
-npm run build  # 生成 dist/index.html
+npm run build  # 生成 dist/index.html 和根目录单文件入口
 npm run check  # 校验离线产物、完整阅读器与内容规则
 npm run verify # 测试 + 构建 + 校验
 ```
 
-`npm run build` 会把样式、游戏目录、学习引擎、目录索引、内容适配器与 UI 内联成一个约 211 KB 的 `dist/index.html`。它是可离线启动的应用外壳；完整复习内容始终来自你本机选择的文件夹。
+`npm run build` 会把样式、游戏目录、学习引擎、目录索引、内容适配器与 UI 内联成一个约 211 KB 的单文件，并同时写入根目录 `知屿学习营地.html` 与 `dist/index.html`。它是可离线启动的应用外壳；完整复习内容始终来自你本机选择的文件夹。
 
 ## 项目结构
 
 ```text
 zhiyu-study-camp/
+├── 知屿学习营地.html          # 最新可双击单文件（每次构建自动更新）
 ├── index.html                  # 开发入口
 ├── assets/
 │   ├── styles.css              # 暗夜营地、目录树、阅读器与响应式
@@ -93,7 +100,8 @@ zhiyu-study-camp/
 │   ├── library.test.js         # 目录过滤、标题和层级
 │   ├── storage.test.js         # 账号与进度隔离
 │   └── fixtures/               # 浏览器烟测用最小资料库
-├── dist/index.html             # 可离线启动的单文件构建
+├── dist/index.html             # GitHub Pages / 单文件构建
+├── legacy/                     # 本地旧原型备份（不进入公开仓库）
 └── docs/                       # 架构报告、模块地图、ADR、美术说明
 ```
 

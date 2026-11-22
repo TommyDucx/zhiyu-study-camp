@@ -7,3 +7,4 @@ coverage/
 .code-review-graph/
 # Original single-file prototype kept locally; the maintained entry is index.html.
 知屿学习营地.html
+legacy/
