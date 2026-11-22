@@ -14,15 +14,15 @@
 
 将领域行为收敛到一个 `Learning Engine` **模块**，通过小接口提供：
 
-- `openCard`
-- `setStatus`
+- `openDocument`
+- `completeDocument`
 - `checkIn`
 - `openChest`
 - `redeem`
 - `snapshot`
 - `normalize` / `reconcile`
 
-领域模块不接触 DOM 或存储，变更操作返回 `effects`，由 UI 转成反馈。奖励幂等性通过内部 `awarded` 账本实现，不暴露给调用方。
+`openDocument` 永不发奖励；只有阅读器确认“从顶部滚动到底部”后才调用 `completeDocument`。领域模块不接触 DOM 或存储，变更操作返回 `effects`，由 UI 转成反馈。奖励幂等性通过内部 `awarded` 账本实现，不暴露给调用方。
 
 ## 后果
 

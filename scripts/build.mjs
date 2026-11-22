@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SCRIPT_ORDER = ['data.js', 'engine.js', 'storage.js', 'app.js'];
+const SCRIPT_ORDER = ['data.js', 'engine.js', 'storage.js', 'library.js', 'content-source.js', 'app.js'];
 
 async function read(relativePath) {
   return readFile(join(root, relativePath), 'utf8');
@@ -65,6 +65,7 @@ async function main() {
   await writeFile(join(root, 'dist/index.html'), html, 'utf8');
   await writeFile(join(root, 'dist/.nojekyll'), '', 'utf8');
   await cp(join(root, 'docs'), join(root, 'dist/docs'), { recursive: true });
+  await cp(join(root, 'assets'), join(root, 'dist/assets'), { recursive: true });
   for (const file of ['README.md', 'GLOSSARY.md', 'LICENSE']) {
     await cp(join(root, file), join(root, 'dist', file));
   }

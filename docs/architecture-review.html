@@ -33,9 +33,9 @@
   </div>
   <div class="metrics">
     <div class="metric"><small>原始脚本</small><strong>50.9K</strong><span>CHARACTERS IN ONE BLOCK</span></div>
-    <div class="metric"><small>规则与仓储测试</small><strong>14</strong><span>ALL PASSING</span></div>
-    <div class="metric"><small>模块边界</small><strong>4+1</strong><span>DATA · ENGINE · STORE · UI</span></div>
-    <div class="metric"><small>离线产物</small><strong>164K</strong><span>SELF-CONTAINED HTML</span></div>
+    <div class="metric"><small>规则、目录与仓储测试</small><strong>23</strong><span>ALL PASSING</span></div>
+    <div class="metric"><small>模块边界</small><strong>6+1</strong><span>DATA · ENGINE · STORE · LIBRARY · SOURCE · UI</span></div>
+    <div class="metric"><small>离线产物</small><strong>193K</strong><span>SELF-CONTAINED HTML</span></div>
   </div>
 </div>
 
@@ -49,8 +49,8 @@
         <div class="graph-node"><div class="node-icon">17</div><b>社区被检测</b><small>LARGEST COMMUNITY: 11,059 NODES</small><p>没有跨社区边，说明图谱更多在描述页面产物，而不是成熟代码依赖。</p></div>
         <div class="graph-node"><div class="node-icon">140</div><b>测试缺口</b><small>2 TEST NODES / 24,018 TOTAL</small><p>大量高连接节点没有测试。这就是需要先建立领域模块的原因。</p></div>
       </div>
-      <div class="evidence-note"><div><strong>为什么不在原目录直接开源</strong><br>原工作区包含个人学习资料、试卷与 PDF，且还没有任何 commit。发布它既不符合最小暴露原则，也让产物和源文件难以区分。</div><div><strong>为什么单独建仓库</strong><br>新目录只包含 30 张知识卡、应用源码、测试与文档；不携带本地账号数据和原始教材附件。</div></div>
-      <div class="note"><strong>重构后的新图谱：</strong> 13 个源文件、300 个节点、1,465 条边、14 个 Test 节点、无 import cycle。剩余高连接热点集中在 <code>renderAll</code>、账号表单和构建器，这正是下一步浏览器烟测应覆盖的区域；学习规则已经退到可测试的引擎 seam 后面。</div>
+      <div class="evidence-note"><div><strong>为什么不在原目录直接开源</strong><br>原工作区包含个人学习资料、试卷与 PDF，且还没有任何 commit。发布它既不符合最小暴露原则，也让产物和源文件难以区分。</div><div><strong>为什么复习资料不进仓库</strong><br>完整 HTML 留在本机，应用只通过目录权限读取。公开仓库携带源码、测试、角色素材和文档；个人笔记仍然可以完整使用。</div></div>
+      <div class="note"><strong>重构后的新图谱：</strong> 19 个源文件、287 个节点、2,095 条边、23 个 Test 节点、无 import cycle。剩余高连接热点集中在 <code>bindEvents</code>、<code>openDocument</code> 与 <code>renderAll</code>，这正是下一步浏览器烟测应覆盖的区域；学习规则已经退到可测试的引擎 seam 后面。</div>
     </div>
   </div>
 </section>
@@ -65,28 +65,28 @@
         <div class="split">
           <div class="side">
             <div class="side-label">BEFORE / SHALLOW</div><h4>事件直接改四套状态</h4>
-            <div class="stack"><div class="box">click / data-status</div><div class="box hot">state.cards[].status = …</div><div class="box hot">state.daily[].mastered.push(…)</div><div class="box hot">awardOnce('mastered:…')</div><div class="box">renderAll(); toast(); celebrate()</div><div class="box">没有可测试接缝</div></div>
-            <ul class="problem-list"><li>“首次掌握”与“每日委托”判断混在一起</li><li>重复打开、切换状态可产生意外奖励</li><li>测试必须启动浏览器并模拟 DOM</li></ul>
+            <div class="stack"><div class="box">click / data-status</div><div class="box hot">state.documents[].reads++</div><div class="box hot">state.daily[].reads.push(…)</div><div class="box hot">awardOnce('read:…')</div><div class="box">renderAll(); toast(); celebrate()</div><div class="box">没有可测试接缝</div></div>
+            <ul class="problem-list"><li>“首次通读”与“今日第二篇”判断混在一起</li><li>仅打开文档不能被误算成完整通读</li><li>测试必须启动浏览器并模拟滚动</li></ul>
           </div>
           <div class="arrow">→</div>
           <div class="side after">
             <div class="side-label">AFTER / DEEP</div><h4>UI 只消费领域结果</h4>
-            <div class="stack"><div class="box">click / data-status</div><div class="box green">engine.setStatus(state, options)</div><div class="box purple">awarded ledger · daily settle · achievement</div><div class="box green">{ ok, effects }</div><div class="box">toast + render</div><div class="box green">Node tests / no browser</div></div>
-            <ul class="problem-list" style="list-style:none"><li style="color:#9ccbb0">✓ 幂等奖励集中在一个账本</li><li style="color:#9ccbb0">✓ 每次状态迁移可选注入时间</li><li style="color:#9ccbb0">✓ 14 条边界测试直接穿过接口</li></ul>
+            <div class="stack"><div class="box">scroll reaches bottom</div><div class="box green">engine.completeDocument(state, options)</div><div class="box purple">awarded ledger · daily settle · achievement</div><div class="box green">{ ok, effects }</div><div class="box">toast + reader progress</div><div class="box green">Node tests / no browser</div></div>
+            <ul class="problem-list" style="list-style:none"><li style="color:#9ccbb0">✓ 幂等奖励集中在一个账本</li><li style="color:#9ccbb0">✓ 每次状态迁移可选注入时间</li><li style="color:#9ccbb0">✓ 23 条边界测试直接穿过接口</li></ul>
           </div>
         </div>
         <div class="benefits"><strong>Leverage:</strong> 6 个入口承载全部规则；<strong>Locality:</strong> 奖励、委托、成就变更集中；<strong>Test surface:</strong> UI 与测试走同一个 seam。</div>
       </article>
 
       <article class="candidate">
-        <div class="candidate-head"><div><h3><span>DEEPENING 02 / IMPLEMENTED</span>让内容目录只做数据</h3></div><span class="badge done">已实施 · STRONG</span></div>
-        <div class="meta"><div class="meta-item"><small>FILES</small><code>src/data.js · src/engine.js</code></div><div class="meta-item"><small>PROBLEM</small><span>成就定义携带闭包依赖</span></div><div class="meta-item"><small>INTERFACE</small><span>30 cards · 8 achievements · 4 rewards</span></div></div>
+        <div class="candidate-head"><div><h3><span>DEEPENING 02 / IMPLEMENTED</span>把文件系统变成可测试的目录索引</h3></div><span class="badge done">已实施 · STRONG</span></div>
+        <div class="meta"><div class="meta-item"><small>FILES</small><code>src/library.js · src/content-source.js</code></div><div class="meta-item"><small>PROBLEM</small><span>路径过滤和目录树混在 UI</span></div><div class="meta-item"><small>INTERFACE</small><span>files → tree + documents</span></div></div>
         <div class="split">
-          <div class="side"><div class="side-label">BEFORE</div><h4>内容与算法互相认识</h4><div class="stack"><div class="box hot">{ id:'master5', value: s =&gt; masteredCount(s) }</div><div class="box hot">awardOnce('achievement:…', …)</div><div class="box hot">DOM 初始化时再复制一遍判断</div></div><p style="font-size:11px;color:#a5a9c0">添加成就时必须知道内部 helper 名称；内容文件无法独立校验和测试。</p></div>
+          <div class="side"><div class="side-label">BEFORE</div><h4>点击处承担目录算法</h4><div class="stack"><div class="box hot">input.files → 立即生成 DOM</div><div class="box hot">临时过滤打印版、原页、备份</div><div class="box hot">标题切割散落在渲染字符串</div><div class="box hot">文件系统与树结构无法独立测试</div></div><p style="font-size:11px;color:#a5a9c0">添加目录规则或改标题清洗，需要触碰 UI 事件，回归风险高。</p></div>
           <div class="arrow">→</div>
-          <div class="side after"><div class="side-label">AFTER</div><h4>声明式指标，引擎负责计算</h4><div class="stack"><div class="box green">{ metric:'mastered', target:5, xp:50 }</div><div class="box green">achievementValue(state, definition)</div><div class="box">初始化时校验未知 metric / 重复 id</div></div><p style="font-size:11px;color:#a5a9c0">数据可以冻结；指标有限且可枚举；新增内容不需要复制业务代码。</p></div>
+          <div class="side after"><div class="side-label">AFTER</div><h4>纯索引模块 + 内容适配器</h4><div class="stack"><div class="box green">library.buildLibrary(filePaths)</div><div class="box green">filterLibrary(query)</div><div class="box green">content-source 目录句柄 / FileList</div><div class="box">UI 只渲染 tree + documents</div></div><p style="font-size:11px;color:#a5a9c0">真实资料库 110 个 HTML → 99 篇完整复习资料、50 个层级目录；过滤规则可直接测试。</p></div>
         </div>
-        <div class="small-map"><div class="box">30 张知识卡</div><div class="box">5 个学科</div><div class="box">8 个成就</div><div class="box">4 个奖励</div><div class="box">8 个等级称号</div></div>
+        <div class="small-map"><div class="box">99 篇完整资料</div><div class="box">50 个目录</div><div class="box">5 个学科</div><div class="box">8 个成就</div><div class="box">4 个奖励</div></div>
         <div class="benefits"><strong>Leverage:</strong> 内容可以独立增长；<strong>Locality:</strong> 指标定义与求值集中；<strong>Test surface:</strong> `npm test` 与 `npm run check` 同时校验内容与规则。</div>
       </article>
 
@@ -96,7 +96,7 @@
         <div class="split">
           <div class="side"><div class="side-label">BEFORE</div><h4>一个文件承担所有角色</h4><div class="stack"><div class="box hot">143 KB HTML</div><div class="box">2 style blocks + 1 script block</div><div class="box">内容、规则、渲染、存储都在同一层</div><div class="box">无法按模块运行测试</div></div></div>
           <div class="arrow">→</div>
-          <div class="side after"><div class="side-label">AFTER</div><h4>可维护源码，可携带产物</h4><div class="stack"><div class="box green">index.html + assets + src/</div><div class="box green">scripts/build.mjs</div><div class="box purple">inline + compile + external-link guard</div><div class="box green">dist/index.html 164 KB 离线可用</div></div></div>
+          <div class="side after"><div class="side-label">AFTER</div><h4>可维护源码，可携带产物</h4><div class="stack"><div class="box green">index.html + assets + src/</div><div class="box green">scripts/build.mjs</div><div class="box purple">inline + compile + external-link guard</div><div class="box green">dist/index.html 191 KB 离线启动</div></div></div>
         </div>
         <div class="note"><strong>构建器也抓到了自己的第一个 bug：</strong> JavaScript 的 `String.replace` 会把源码中的 `$$` 当成替换语义，导致构建版里 `const $$` 被吞掉并报“Identifier $ has already been declared”。修复方式是使用替换回调函数，并在内联后重新编译每段脚本。</div>
       </article>
@@ -109,12 +109,14 @@
     <div class="section-head"><div class="section-no">03 / CURRENT SHAPE</div><div><h2>现在的运行结构。</h2><p>领域规则与 DOM 解耦，存储退到适配器后面，发布物由构建器统一生成。账号仍在本机，容量和同步边界被明确写出，不假装它是服务端系统。</p></div></div>
     <pre class="mermaid">
 flowchart LR
-  DATA["内容目录&lt;br/&gt;30 cards · 8 achievements"] --> ENGINE["学习引擎&lt;br/&gt;卡片 / 打卡 / 宝箱 / 兑换"]
-  ENGINE --> APP["UI 编排&lt;br/&gt;渲染 · 账号 · 反馈"]
+  DATA["游戏目录&lt;br/&gt;学科 · 成就 · 奖励"] --> ENGINE["学习引擎&lt;br/&gt;通读 / 打卡 / 宝箱 / 兑换"]
+  SOURCE["本机复习文件&lt;br/&gt;File System adapter"] --> LIBRARY["分层索引&lt;br/&gt;99 docs / 50 folders"]
+  LIBRARY --> APP["阅读器与营地 UI&lt;br/&gt;滚动完成 · 账号 · 反馈"]
+  ENGINE --> APP
   STORE["进度仓储&lt;br/&gt;Web Storage adapter"] <--> APP
-  ENGINE --> TEST["Node 规则测试&lt;br/&gt;14 passing"]
+  ENGINE --> TEST["Node 规则测试&lt;br/&gt;23 passing"]
   APP --> BUILD["单文件构建&lt;br/&gt;inline + verify"]
-  BUILD --> DIST["dist/index.html&lt;br/&gt;offline"]
+  BUILD --> DIST["dist/index.html&lt;br/&gt;offline shell"]
     </pre>
     <div class="note"><strong>接口纪律：</strong> `app.js` 不知道 `awarded` 账本，`engine.js` 不知道 `document`，`storage.js` 不知道奖励规则。每一个位置只保留自己的复杂度。</div>
   </div>
@@ -127,8 +129,8 @@ flowchart LR
       <div class="next-card">
         <span class="badge worth">WORTH EXPLORING</span>
         <h3>下一步：浏览器烟测层</h3>
-        <p>目前的 14 条测试穿过学习引擎与仓储适配器，但不能证明按钮绑定、弹窗、刷新恢复和移动布局仍然可用。下一步应该把真实浏览器检查做成可重复的验证，而不是每次靠人工点。</p>
-        <ul class="checklist"><li><b>01</b> Playwright smoke: 翻卡 → 掌握 → 打卡 → 宝箱</li><li><b>02</b> 注册、登录、错误密码、刷新恢复</li><li><b>03</b> 390px 视口无横向溢出</li><li><b>04</b> 产物 dist 与源站行为一致</li></ul>
+        <p>目前的 23 条测试穿过学习引擎、目录索引与仓储适配器，也覆盖了真实目录规则；但按钮绑定与自动滚动完成仍需浏览器验证。下一步应把已执行的浏览器烟测固化为 CI 任务。</p>
+        <ul class="checklist"><li><b>01</b> Playwright smoke: 导入 → 展开 → 打开全文 → 滚到底</li><li><b>02</b> 注册、登录、错误密码、刷新恢复</li><li><b>03</b> 390px 视口无横向溢出且进度条不被导航遮挡</li><li><b>04</b> 产物 dist 与源站行为一致</li></ul>
       </div>
       <div class="next-card">
         <h3>不急于做的两件事</h3>
@@ -140,6 +142,6 @@ flowchart LR
   </div>
 </section>
 
-<footer class="wrap footer"><div>知屿 · 暗夜学习营地 / ARCHITECTURE REVIEW 001<br>Built with vanilla JS · local-first · 30 knowledge cards</div><span><a href="ARCHITECTURE.md">架构说明</a> · <a href="CODE-MAP.md">代码导图</a> · <a href="../README.md">README</a></span></footer>
+<footer class="wrap footer"><div>知屿 · 暗夜学习营地 / ARCHITECTURE REVIEW 001<br>Built with vanilla JS · local-first · 30 knowledge cards</div><span><a href="ARCHITECTURE.md">架构说明</a> · <a href="CODE-MAP.md">代码导图</a> · <a href="ART-DIRECTION.md">美术说明</a> · <a href="../README.md">README</a></span></footer>
 </body>
 </html>

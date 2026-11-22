@@ -1,8 +1,8 @@
 /* Zhiyu Study Camp — learning engine.
  *
  * A DOM-free, storage-free module. The app talks to this module through a
- * small interface: openCard, setStatus, checkIn, openChest, redeem, snapshot.
- * All XP, coins, quests, achievements and level rules live behind that seam.
+ * small interface: openDocument, completeDocument, checkIn, openChest, redeem,
+ * snapshot. Reading counts only after the reader reports reaching the end.
  */
 (function (root, factory) {
   const api = factory();
@@ -11,9 +11,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = 2;
-  const STATUSES = new Set(['unseen', 'learning', 'mastered']);
-  const METRICS = new Set(['uniqueCards', 'subjectsSeen', 'mastered', 'streakPeak', 'level']);
+  const VERSION = 3;
+  const METRICS = new Set(['documents', 'subjectsSeen', 'streakPeak', 'level']);
   const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
   function pad(value) {
@@ -44,22 +43,24 @@
     return Array.isArray(value) ? value : [];
   }
 
-  function uniqueKnown(values, knownIds) {
-    return [...new Set(asArray(values).filter((value) => knownIds.has(value)))];
+  function documentId(value) {
+    return typeof value === 'string' && value.trim() ? value.trim().slice(0, 500) : null;
+  }
+
+  function uniqueStrings(values) {
+    return [...new Set(asArray(values).filter((value) => typeof value === 'string' && value.trim()))];
   }
 
   function createEngine(config) {
-    const cards = asArray(config && config.cards);
     const achievements = asArray(config && config.achievements);
     const rewards = asArray(config && config.rewards);
     const levels = asArray(config && config.levelNames);
-    if (!cards.length) throw new Error('Learning engine needs at least one card.');
+    const subjects = new Set(asArray(config && config.subjects));
     if (!levels.length) throw new Error('Learning engine needs level names.');
+    if (!subjects.size) throw new Error('Learning engine needs subject names.');
 
-    const cardIds = new Set(cards.map((card) => card.id));
     const achievementIds = new Set(achievements.map((achievement) => achievement.id));
     const rewardsById = new Map(rewards.map((reward) => [reward.id, reward]));
-    if (cardIds.size !== cards.length) throw new Error('Duplicate card id.');
     if (achievementIds.size !== achievements.length) throw new Error('Duplicate achievement id.');
     if (rewardsById.size !== rewards.length) throw new Error('Duplicate reward id.');
     for (const achievement of achievements) {
@@ -73,7 +74,7 @@
         version: VERSION,
         xp: 0,
         coins: 30,
-        cards: {},
+        documents: {},
         checkins: {},
         daily: {},
         achievements: {},
@@ -98,45 +99,54 @@
       state.version = VERSION;
       state.xp = Math.max(0, Number(state.xp) || 0);
       state.coins = Math.max(0, Number(state.coins) || 0);
-      state.cards = {};
-      for (const [id, value] of Object.entries(asObject(raw.cards))) {
-        if (!cardIds.has(id)) continue;
-        const card = asObject(value);
-        state.cards[id] = {
-          views: Math.max(0, Number(card.views) || 0),
-          status: STATUSES.has(card.status) ? card.status : 'unseen',
-          lastView: typeof card.lastView === 'string' ? card.lastView : null,
-          ...(typeof card.masteredAt === 'string' ? { masteredAt: card.masteredAt } : {}),
+
+      state.documents = {};
+      for (const [id, value] of Object.entries(asObject(raw.documents))) {
+        const key = documentId(id);
+        if (!key) continue;
+        const entry = asObject(value);
+        const subject = subjects.has(entry.subject) ? entry.subject : '';
+        state.documents[key] = {
+          opens: Math.max(0, Number(entry.opens) || 0),
+          reads: Math.max(0, Number(entry.reads) || 0),
+          lastOpen: typeof entry.lastOpen === 'string' ? entry.lastOpen : null,
+          lastRead: typeof entry.lastRead === 'string' ? entry.lastRead : null,
+          title: typeof entry.title === 'string' ? entry.title.slice(0, 160) : '',
+          subject,
         };
       }
+
       state.checkins = {};
       for (const [day, value] of Object.entries(asObject(raw.checkins))) {
         if (!DATE_KEY.test(day)) continue;
         state.checkins[day] = { ts: asObject(value).ts || new Date().toISOString() };
       }
+
       state.daily = {};
       for (const [day, value] of Object.entries(asObject(raw.daily))) {
         if (!DATE_KEY.test(day)) continue;
-        const entry = asObject(value);
         state.daily[day] = {
-          views: uniqueKnown(entry.views, cardIds),
-          mastered: uniqueKnown(entry.mastered, cardIds),
+          reads: uniqueStrings(asObject(value).reads).map((id) => id.slice(0, 500)),
         };
       }
+
       state.achievements = {};
       for (const id of achievementIds) {
         if (typeof asObject(raw.achievements)[id] === 'string') {
           state.achievements[id] = raw.achievements[id];
         }
       }
+
       state.awarded = {};
       for (const [key, value] of Object.entries(asObject(raw.awarded))) {
         if (typeof value === 'string') state.awarded[key] = value;
       }
+
       state.rewards = {};
       for (const [id, value] of Object.entries(asObject(raw.rewards))) {
         if (rewardsById.has(id)) state.rewards[id] = Math.max(0, Number(value) || 0);
       }
+
       state.redemptions = asArray(raw.redemptions)
         .filter((entry) => entry && typeof entry === 'object')
         .slice(0, 120)
@@ -147,6 +157,7 @@
           cost: Math.max(0, Number(entry.cost) || 0),
           ts: String(entry.ts || new Date().toISOString()),
         }));
+
       state.transactions = asArray(raw.transactions)
         .filter((entry) => entry && typeof entry === 'object')
         .slice(0, 240)
@@ -158,6 +169,7 @@
           coins: Number(entry.coins) || 0,
           balance: Number(entry.balance) || 0,
         }));
+
       const safeProfile = asObject(raw.profile);
       const displayName = String(safeProfile.name || '').trim().slice(0, 20) || base.profile.name;
       state.profile = {
@@ -172,15 +184,25 @@
       return state;
     }
 
-    function everyDay(state) {
-      return asObject(state.daily);
+    function documentProgress(state, id) {
+      state.documents = asObject(state.documents);
+      if (!state.documents[id]) {
+        state.documents[id] = {
+          opens: 0,
+          reads: 0,
+          lastOpen: null,
+          lastRead: null,
+          title: '',
+          subject: '',
+        };
+      }
+      return state.documents[id];
     }
 
     function daily(state, day = dayKey()) {
       state.daily = asObject(state.daily);
-      if (!state.daily[day]) state.daily[day] = { views: [], mastered: [] };
-      state.daily[day].views = asArray(state.daily[day].views);
-      state.daily[day].mastered = asArray(state.daily[day].mastered);
+      if (!state.daily[day]) state.daily[day] = { reads: [] };
+      state.daily[day].reads = asArray(state.daily[day].reads);
       return state.daily[day];
     }
 
@@ -224,18 +246,12 @@
     }
 
     function metrics(state) {
-      const values = Object.values(state.cards);
-      const viewedIds = Object.keys(state.cards).filter((id) => state.cards[id].views > 0);
-      const subjectsSeen = new Set(
-        viewedIds.map((id) => cards.find((card) => card.id === id)?.subject).filter(Boolean)
-      ).size;
-      const mastered = values.filter((card) => card.status === 'mastered').length;
-      const totalViews = values.reduce((sum, card) => sum + (Number(card.views) || 0), 0);
+      const entries = Object.values(state.documents);
+      const read = entries.filter((entry) => entry.reads > 0);
       return {
-        uniqueCards: viewedIds.length,
-        subjectsSeen,
-        mastered,
-        totalViews,
+        uniqueDocuments: read.length,
+        totalReads: entries.reduce((sum, entry) => sum + (Number(entry.reads) || 0), 0),
+        subjectsSeen: new Set(read.map((entry) => entry.subject).filter(Boolean)).size,
         streak: currentStreak(state),
         bestStreak: bestStreak(state),
         checkinDays: Object.keys(state.checkins).length,
@@ -244,31 +260,26 @@
 
     function quests(state, day = dayKey()) {
       const entry = daily(state, day);
+      const checked = Boolean(state.checkins[day]);
+      const readOne = entry.reads.length >= 1;
+      const readTwo = entry.reads.length >= 2;
       return {
-        checkin: Boolean(state.checkins[day]),
-        views: entry.views.length,
-        mastered: entry.mastered.length,
-        reviewDone: entry.views.length >= 3,
-        masterDone: entry.mastered.length >= 1,
-        allDone:
-          Boolean(state.checkins[day]) && entry.views.length >= 3 && entry.mastered.length >= 1,
-        progress: [
-          Boolean(state.checkins[day]),
-          entry.views.length >= 3,
-          entry.mastered.length >= 1,
-        ].filter(Boolean).length,
+        checkin: checked,
+        reads: entry.reads.length,
+        readOne,
+        readTwo,
+        allDone: checked && readOne && readTwo,
+        progress: [checked, readOne, readTwo].filter(Boolean).length,
       };
     }
 
     function achievementValue(state, achievement) {
       const snapshot = metrics(state);
       switch (achievement.metric) {
-        case 'uniqueCards':
-          return snapshot.uniqueCards;
+        case 'documents':
+          return snapshot.uniqueDocuments;
         case 'subjectsSeen':
           return snapshot.subjectsSeen;
-        case 'mastered':
-          return snapshot.mastered;
         case 'streakPeak':
           return Math.max(snapshot.streak, snapshot.bestStreak);
         case 'level':
@@ -336,13 +347,13 @@
     function settleDaily(state, at, effects) {
       const day = dayKey(at);
       const entry = daily(state, day);
-      if (entry.views.length >= 3) {
-        grant(state, `quest:views:${day}`, 30, 10, '今日航线 · 博览三张', at, effects);
+      if (entry.reads.length >= 1) {
+        grant(state, `quest:read1:${day}`, 30, 10, '今日航线 · 精读一篇', at, effects);
       }
-      if (entry.mastered.length >= 1) {
-        grant(state, `quest:master:${day}`, 25, 8, '今日航线 · 攻克一点', at, effects);
+      if (entry.reads.length >= 2) {
+        grant(state, `quest:read2:${day}`, 25, 8, '今日航线 · 再读一篇', at, effects);
       }
-      if (state.checkins[day] && entry.views.length >= 3 && entry.mastered.length >= 1) {
+      if (state.checkins[day] && entry.reads.length >= 2) {
         grant(state, `quest:all:${day}`, 40, 15, '今日全航线完成', at, effects);
       }
       evaluateAchievements(state, at, effects);
@@ -353,55 +364,36 @@
       return { ok, effects: effects || [], reason };
     }
 
-    function openCard(state, options) {
-      const cardId = options && options.cardId;
-      const at = toDate(options && options.at);
-      if (!cardIds.has(cardId)) {
-        return result(false, [{ kind: 'info', title: '知识卡不存在', text: '这张卡可能已从内容目录移除。' }], 'unknown-card');
-      }
-      const card = cards.find((entry) => entry.id === cardId);
-      const effects = [];
-      if (!state.cards[cardId]) {
-        state.cards[cardId] = { views: 0, status: 'unseen', lastView: null };
-      }
-      const progress = state.cards[cardId];
-      progress.views += 1;
-      progress.lastView = at.toISOString();
-      if (progress.status === 'unseen') progress.status = 'learning';
-      const entry = daily(state, dayKey(at));
-      if (!entry.views.includes(cardId)) entry.views.push(cardId);
-      grant(state, `first-view:${cardId}`, 5, 1, `新知识已点亮 · ${card.title}`, at, effects);
-      settleDaily(state, at, effects);
-      return result(true, effects);
+    function openDocument(state, options) {
+      const input = asObject(options);
+      const id = documentId(input.documentId);
+      const at = toDate(input.at);
+      if (!id) return result(false, [{ kind: 'info', title: '无法打开资料', text: '资料路径为空。' }], 'invalid-document');
+      const entry = documentProgress(state, id);
+      entry.opens += 1;
+      entry.lastOpen = at.toISOString();
+      if (input.title) entry.title = String(input.title).slice(0, 160);
+      if (subjects.has(input.subject)) entry.subject = input.subject;
+      return result(true, []);
     }
 
-    function setStatus(state, options) {
-      const cardId = options && options.cardId;
-      const status = options && options.status;
-      const at = toDate(options && options.at);
-      if (!cardIds.has(cardId)) {
-        return result(false, [{ kind: 'info', title: '知识卡不存在', text: '这张卡可能已从内容目录移除。' }], 'unknown-card');
-      }
-      if (!STATUSES.has(status)) {
-        return result(false, [{ kind: 'info', title: '未知的掌握状态', text: '请选择一个有效状态。' }], 'unknown-status');
-      }
-      const card = cards.find((entry) => entry.id === cardId);
+    function completeDocument(state, options) {
+      const input = asObject(options);
+      const id = documentId(input.documentId);
+      const at = toDate(input.at);
+      if (!id) return result(false, [{ kind: 'info', title: '无法记录阅读', text: '资料路径为空。' }], 'invalid-document');
+      const entry = documentProgress(state, id);
+      entry.reads += 1;
+      entry.lastRead = at.toISOString();
+      if (input.title) entry.title = String(input.title).slice(0, 160);
+      if (subjects.has(input.subject)) entry.subject = input.subject;
+      const dayEntry = daily(state, dayKey(at));
+      if (!dayEntry.reads.includes(id)) dayEntry.reads.push(id);
+
       const effects = [];
-      if (!state.cards[cardId]) {
-        state.cards[cardId] = { views: 0, status: 'unseen', lastView: null };
-      }
-      const progress = state.cards[cardId];
-      const firstMastery = status === 'mastered' && !progress.masteredAt;
-      progress.status = status;
-      if (status === 'mastered') {
-        progress.masteredAt = progress.masteredAt || at.toISOString();
-        if (firstMastery) {
-          const entry = daily(state, dayKey(at));
-          if (!entry.mastered.includes(cardId)) entry.mastered.push(cardId);
-          grant(state, `mastered:${cardId}`, 15, 4, `掌握新知识 · ${card.title}`, at, effects);
-          settleDaily(state, at, effects);
-        }
-      }
+      const title = entry.title || '复习资料';
+      grant(state, `read:${id}`, 15, 4, `读完全文 · ${title}`, at, effects);
+      settleDaily(state, at, effects);
       return result(true, effects);
     }
 
@@ -521,8 +513,8 @@
       achievementValue,
       currentStreak,
       bestStreak,
-      openCard,
-      setStatus,
+      openDocument,
+      completeDocument,
       checkIn,
       openChest,
       redeem,

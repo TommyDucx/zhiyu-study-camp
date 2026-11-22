@@ -2,149 +2,163 @@
 
 ## 1. 设计目标
 
-知屿需要同时满足三种互相拉扯的要求：
+知屿要同时满足四种要求：
 
-1. **可直接使用**：用户双击一个 HTML 文件就能离线学习。
-2. **可持续修改**：新增知识卡、规则或主题时，不应在 1000 多行的单文件里寻找调用点。
-3. **可验证**：奖励是否重复、连续打卡是否跨月正确、兑换是否会透支，必须能脱离浏览器测试。
+1. **读完整内容**：直接打开复习 HTML 原文，而不是把内容二次切碎。
+2. **本机隐私**：完整笔记留在本机；public 仓库不携带任何复习资料。
+3. **可核验奖励**：只有从顶部滚动到底部才算通读；重复访问不能刷奖励。
+4. **可维护、可携带**：源码分层，仍能构建成可离线启动的单文件应用。
 
-因此项目把“**可维护的源结构**”和“**可携带的发布产物**”分开：`src/` 是可读的源代码，`dist/index.html` 是由构建器生成的自包含交付物。
+## 2. 模块图
 
 ```mermaid
 flowchart TB
-  subgraph Authoring["可维护源码"]
-    DATA[内容目录<br/>src/data.js]
-    ENGINE[学习引擎<br/>src/engine.js]
-    STORE[进度仓储<br/>src/storage.js]
-    APP[界面与账号<br/>src/app.js]
-    CSS[视觉系统<br/>assets/styles.css]
-    DATA --> ENGINE
-    ENGINE --> APP
-    STORE <--> APP
-    APP --> CSS
+  subgraph Source["本机内容"]
+    FS[文件夹 / File System Access] --> SRC[content-source.js]
   end
-  subgraph Delivery["可携带交付"]
-    BUILD[scripts/build.mjs]
-    SINGLE[dist/index.html]
-    BUILD --> SINGLE
-  end
-  Authoring --> BUILD
-  TEST[Node 规则测试] --> ENGINE
+  SRC --> LIB[library.js<br/>路径过滤 + 分层索引]
+  LIB --> APP[app.js<br/>目录 / 阅读器 / 账号]
+  DATA[data.js<br/>学科 · 成就 · 奖励] --> ENGINE[engine.js<br/>学习引擎]
+  APP --> ENGINE
+  APP <--> STORE[storage.js<br/>Web Storage 适配器]
+  ENGINE --> TEST[tests<br/>23 passing]
+  BUILD[build.mjs] --> DIST[dist/index.html<br/>离线应用外壳]
+  APP --> BUILD
 ```
 
-## 2. 核心接缝
+## 3. 核心接缝
 
-### 2.1 学习引擎
+### 3.1 学习引擎
 
-**模块**：`createEngine({ cards, achievements, rewards, levelNames })`
+**模块**：`createEngine({ achievements, rewards, levelNames, subjects })`
 
-**接口**只有以下操作：
+**接口**：
 
-| 操作 | 责任 | 是否修改状态 |
+| 操作 | 责任 | 奖励 |
 | --- | --- | --- |
-| `defaultState()` | 创建干净进度 | 否 |
-| `normalize(raw)` | 迁移旧数据、移除未知 ID、约束字段 | 否 |
-| `openCard(state, opts)` | 记录查看与首次查看奖励 | 是 |
-| `setStatus(state, opts)` | 修改掌握状态与首次掌握奖励 | 是 |
-| `checkIn(state, opts)` | 打卡与连续统计 | 是 |
-| `openChest(state, opts)` | 校验每日航线并发放宝箱 | 是 |
-| `redeem(state, opts)` | 扣币、库存、兑换记录 | 是 |
-| `snapshot(state)` | 给 UI 的只读汇总 | 否 |
-| `reconcile(state, opts)` | 补齐历史数据中应得的成就 | 是 |
+| `openDocument(state, opts)` | 记录打开次数、最近打开时间 | 不发 |
+| `completeDocument(state, opts)` | 记录一次完整通读，计入当日唯一篇目 | 首次通读 + 每日委托 |
+| `checkIn(state, opts)` | 打卡、连续天数 | 打卡奖励 |
+| `openChest(state, opts)` | 校验三项每日委托 | 宝箱奖励 |
+| `redeem(state, opts)` | 扣币、库存、兑换记录 | 不发 |
+| `snapshot(state)` | 给 UI 的只读汇总 | — |
 
-每个变更操作返回：
+**关键不变量**：
 
-```js
-{ ok: true, effects: [{ kind: 'reward', title, xp, coins }] }
-```
+- `openDocument` 永不发放阅读奖励；只有 `completeDocument` 能记一次通读。
+- `awarded` 账本以 `read:<path>`、`quest:read1:<day>`、`chest:<day>` 等键保证幂等。
+- 同一天重读同一篇会累加 `reads`，但不会重复计入当日委托，也不会重复发首次奖励。
+- 所有操作允许注入 `at`，因此跨日、跨月、连续打卡可以脱离浏览器测试。
 
-`effects` 是界面反馈的唯一来源。UI 不重新判断“这是不是首次掌握”“宝箱有没有开过”，只负责把事件变成 toast、动画和重新渲染。
+### 3.2 分层索引
 
-**为什么这是一个深层模块**：调用方不需要了解 12 个奖励键、成就指标映射、二次等级曲线、每日奖励顺序或跨日规则；它只需要知道六个动作和一种结果形状。所有实现细节都在同一个模块里，修改规则不需要搜索 DOM 事件处理器。
+**模块**：`ZYLibrary`（`src/library.js`）
 
-### 2.2 进度仓储
-
-**模块**：`createStore(storage)`
-
-它把 Web Storage 的 JSON 读写、损坏数据回退、账号、会话和按用户分隔的进度键封装在一个小接口后面。它的**接缝**允许未来替换为：
-
-- IndexedDB（更大容量、多标签页协调）
-- 加密存储
-- 远端同步适配器
-
-当前只有 Web Storage 一个**适配器**，所以这个接缝主要是为隔离和测试准备的，而不是宣称已经需要多后端。
-
-### 2.3 内容目录
-
-`src/data.js` 是冻结的内容目录。成就不再携带可执行闭包，而使用声明式指标：
+接收文件路径，不读取文件内容，输出：
 
 ```js
-{ id: 'master5', metric: 'mastered', target: 5, xp: 50, coins: 20 }
+{ tree, documents, total, ignored, folders }
 ```
 
-引擎在初始化时校验重复 ID 和未知指标。新增成就时无需改判定算法，只需增加一条定义。
+职责包括：
 
-## 3. 数据流
+- 将选择根目录后的路径归一化到五科之一；
+- 排除打印版、原页扫描、备份、中间构建目录；
+- 按「学科 → 教材 / 专题 → 章节」建树；
+- 从文件名提取可读标题与标签（全书 / 速览 / 完整 / 图谱）。
+
+这是纯函数模块，Node 可以直接测试真实路径，不需要浏览器。
+
+### 3.3 内容来源适配器
+
+**模块**：`ZYContentSource`
+
+当前有两个真实**适配器**：
+
+1. File System Access 目录句柄：支持持久授权；
+2. `<input webkitdirectory>` 的 `FileList`：不支持目录句柄时的会话级回退。
+
+两者都产出相同的 `records[]` 形状。这不是假想接缝，因为已经有两个实际变化来源。
+
+完整 HTML 不进入 `localStorage`：目录句柄只保存在 IndexedDB；打开文档时读取文本并生成 Blob URL，关闭时立即撤销。
+
+### 3.4 进度仓储
+
+`createStore(storage)` 仍只封装账号、会话和按学习者分隔的进度。学习规则和文件内容都不经过它。
+
+## 4. 阅读与完成流程
 
 ```mermaid
 sequenceDiagram
   actor Learner
   participant UI as app.js
+  participant Source as content-source.js
   participant Engine as engine.js
   participant Store as storage.js
-  participant Browser as localStorage
 
-  Learner->>UI: 翻开知识卡
-  UI->>Engine: openCard(state, {cardId, at})
-  Engine->>Engine: 更新查看次数、每日航线、奖励去重
+  Learner->>UI: 展开目录并点击一篇资料
+  UI->>Engine: openDocument(state, {path})
+  UI->>Source: readHtml(handle/file)
+  Source-->>UI: Blob URL
+  UI->>Learner: iframe 显示完整 HTML
+  Learner->>UI: 从顶部滚动到底部
+  UI->>UI: 轮询/读取 iframe 滚动比例
+  UI->>Engine: completeDocument(state, {path})
   Engine-->>UI: { ok, effects }
   UI->>Store: saveProgress(currentUser, state)
-  Store->>Browser: JSON
-  UI->>Learner: 卡片详情 + 奖励反馈 + 重新渲染
+  UI->>Learner: 100% + 奖励反馈 + 目录已读
 ```
 
-日期统一使用本地自然日 `YYYY-MM-DD`；所有写操作接受可注入的 `at`，因此测试能稳定覆盖跨日、跨月和重复行为。
+滚动完成由注入资料页末尾的一小段 **阅读桥** 上报：它在沙箱 iframe 中读取文档根滚动区与大型内部滚动容器，通过 `postMessage` 发送比例；父页面校验 iframe source 与一次性 token 后才调用 `completeDocument`。父页面不直接访问 iframe DOM，也没有把账号存储暴露给资料页。短文档在停留足够时间后视为读完；阅读桥没有回传时，应用会明确显示提示，不会伪造完成。
 
-## 4. 可测试性
+## 5. 数据模型
 
-领域层不访问 `document`、`window` 或 `localStorage`，所以 Node 可以直接调用同一个 `engine.js`：
+```text
+version=3, xp, coins, lastLevel, createdAt
+profile { name, bio, theme }
+documents[path] { opens, reads, lastOpen, lastRead, title, subject }
+checkins[YYYY-MM-DD] { ts }
+daily[YYYY-MM-DD] { reads: [path] }
+achievements[id] = unlockedAt
+awarded[key] = grantedAt
+rewards[id] = count
+redemptions[] / transactions[]
+```
+
+路径是文档的稳定 ID。目录迁移时路径会变，历史记录不会自动映射；这是当前版本接受的范围。
+
+## 6. 测试
 
 ```bash
 npm test
 ```
 
-现有测试覆盖：
+共 23 条：
 
-- 首次查看奖励只发一次，但查看次数持续累加；
-- 每日航线只在条件满足时完成，重复打卡不重复发奖；
-- 掌握奖励永久防重复，状态切换不能刷每日委托；
-- 宝箱未完成时锁定，完成时只开一次；
-- 连续打卡跨日计算；
-- 兑换余额、一次性权益和可重复奖励；
-- 旧数据规范化与未知 ID 移除；
-- 等级边界、本地日期与跨月日期计算。
+- 12 条学习领域规则：打开、通读、重复、每日委托、宝箱、连续、五科成就、兑换、规范化、等级、日期；
+- 7 条目录索引规则：根路径归一化、过滤、标题、层级、重复、搜索、排序；
+- 4 条仓储规则：账号、会话、用户隔离、异常回退。
 
-界面层仍以 DOM 操作为主，尚未建立浏览器自动化测试。这是下一步可深化点，而不是已解决事项。
+浏览器验证使用真实 Chromium，已验证：
 
-## 5. 构建策略
+- 导入含两科的文件夹后，目录树正确显示 2 篇；
+- Blob iframe 可访问 `contentWindow`，滚动到底触发 100%；
+- 读完两篇 + 打卡后，3/3 委托、宝箱启用并正确发放；
+- 390px 视口无横向溢出，阅读器全屏且不与底部导航重叠。
 
-`scripts/build.mjs` 做三件事：
+尚缺：把浏览器烟测固定为 CI 的 Playwright job。
 
-1. 将 CSS 与四个脚本按依赖顺序内联进 `index.html`；
-2. 用函数式替换避免 `$$` 等 `$` 序列被 `String.replace` 误解释；
-3. 对最终嵌入的每段脚本重新做一次语法编译，并检查不存在外链。
+## 7. 已知边界
 
-这使发布产物可以完全离线，同时保留 `src/` 的正常可读、可 diff 源文件。
+- **本机账号不是安全边界**：拥有浏览器存储访问权的人可以修改进度。
+- **资料页是用户自己的 HTML**：它运行在没有 `allow-same-origin` 的 sandbox iframe 中，无法读取父页面账号存储；但它仍可向父页面回传伪造的滚动比例。完成记录适合个人习惯，不足以承载可兑换真实权益的防作弊。
+- **目录路径是身份**：重命名文件或移动目录会被视为新文档，之前的通读记录不会跟随。
+- **多标签页写入采用最后写入者覆盖**：尚无语义合并或冲突解决。
+- **Safari / Firefox 不持久保存目录句柄**：刷新后需要重新选择文件夹，但通读记录会保留。
+- **没有服务端校验**：若未来开放排行榜、真实奖品或多人竞争，奖励规则必须迁到可信服务端。
 
-## 6. 已知边界
-
-- **账号不是安全边界**：纯本机 SHA-256 摘要只能避免明文密码，不能抵抗能访问同一浏览器存储的人。
-- **没有多标签页合并**：两个标签页同时写入时，最后写入者覆盖先前状态。未来若增加同步，应先引入版本号与冲突策略。
-- **界面层仍然是单体**：渲染函数集中在 `app.js`。下一步应按页面拆成独立的 render 模块，但应在真实改动压力出现时再拆，避免为拆而拆。
-- **未接入 CRDT / 网络同步**：local-first 是当前产品约束，不是待补的漏洞。
-- **没有服务端安全校验**：本机奖励可被用户手动修改；在引入排行榜或真实权益前必须迁移到可信服务端规则。
-
-## 7. 架构决策记录
+## 8. 架构决策记录
 
 - [ADR-0001：本地优先与单文件交付](adr/0001-local-first-single-file.md)
 - [ADR-0002：以学习引擎作为领域接缝](adr/0002-learning-engine-seam.md)
+- [ADR-0003：复习内容不进入公开仓库](adr/0003-local-content-boundary.md)

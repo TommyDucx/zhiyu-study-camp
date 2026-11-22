@@ -2,18 +2,19 @@
 
 ## 1. 文件地图
 
-| 文件 | 规模 | 责任 | 被谁调用 |
-| --- | ---: | --- | --- |
-| `index.html` | 83 行 | 页面骨架、语义区块、弹窗与入口脚本顺序 | 浏览器 |
-| `assets/styles.css` | 56 KB | 暗夜营地视觉系统、像素边框、响应式布局 | `index.html` / 构建器 |
-| `src/data.js` | 612 行 | 30 张知识卡、8 个成就、4 个奖励、等级名称 | 学习引擎、UI、测试 |
-| `src/engine.js` | 537 行 | 学习状态迁移、奖励去重、每日委托、成就、等级 | UI、Node 测试 |
-| `src/storage.js` | 101 行 | 账号、会话、按学习者分隔的进度存取 | UI |
-| `src/app.js` | 103 行 | 页面渲染、路由、账号表单、事件委托、toast | 浏览器 |
-| `scripts/build.mjs` | 75 行 | 将源文件内联为单文件并二次校验 | 发布流程 |
-| `tests/engine.test.js` | 167 行 | 10 条学习领域规则测试 | `npm test` |
-| `tests/storage.test.js` | 52 行 | 4 条仓储、隔离与失败回退测试 | `npm test` |
-| `dist/index.html` | 生成物 | 自包含、可离线交付的最终页面 | 终端用户 |
+| 文件 | 责任 | 被谁使用 |
+| --- | --- | --- |
+| `index.html` | 页面骨架、目录树、全文阅读器、弹窗 | 浏览器 |
+| `assets/styles.css` | 暗夜营地、目录树、阅读器、角色卡和响应式 | 页面 / 构建器 |
+| `src/data.js` | 五个学科、8 个成就、4 个奖励、等级名称 | 引擎、UI、测试 |
+| `src/engine.js` | 通读、每日委托、连续打卡、成就、等级与兑换规则 | UI、Node 测试 |
+| `src/storage.js` | 账号、会话、按学习者隔离的进度存取 | UI |
+| `src/library.js` | 文件路径过滤、标题清洗、分层目录和搜索 | UI、测试 |
+| `src/content-source.js` | 目录句柄、FileList、Blob 读取、IndexedDB 句柄 | UI |
+| `src/app.js` | DOM 渲染、目录状态、阅读器滚动检测、账号、事件 | 浏览器 |
+| `scripts/build.mjs` | 将源文件内联为单文件并二次编译校验 | 发布流程 |
+| `tests/*.test.js` | 领域、索引、仓储共 23 条测试 | `npm test` |
+| `dist/index.html` | 约 193 KB 的自包含应用外壳 | 终端用户 |
 
 ## 2. 依赖方向
 
@@ -23,100 +24,134 @@ flowchart TD
   IDX --> DATA[src/data.js]
   IDX --> ENGINE[src/engine.js]
   IDX --> STORE[src/storage.js]
+  IDX --> LIB[src/library.js]
+  IDX --> SRC[src/content-source.js]
   IDX --> APP[src/app.js]
   DATA --> APP
+  DATA --> ENGINE
   ENGINE --> APP
   STORE --> APP
-  DATA --> ENGINE
+  LIB --> APP
+  SRC --> APP
   ENGINE --> TESTS[tests/engine.test.js]
+  LIB --> LIBTESTS[tests/library.test.js]
+  STORE --> STORETESTS[tests/storage.test.js]
   BUILD[scripts/build.mjs] -. inlines .-> IDX
   BUILD --> DIST[dist/index.html]
-  CHECK[scripts/check.mjs] --> DIST
 ```
 
 约束：
 
-- `engine.js` 不得导入/访问 DOM、`window`、`localStorage`；
-- `data.js` 不得包含奖励判定函数；
-- `app.js` 不得直接修改奖励、成就、连续天数或等级；
-- `storage.js` 不得知道学习规则；
-- `dist/` 只能由 `npm run build` 生成，不手改。
+- `engine.js` 不访问 DOM、`window`、`localStorage` 或文件系统；
+- `library.js` 只接收路径，不读取或修改文件；
+- `content-source.js` 只处理文件访问，不知道奖励；
+- `app.js` 只上报“滚动到达底部”，不自行计算 XP；
+- 完整复习文件不被写入 `localStorage`；
+- `dist/` 只能由 `npm run build` 生成。
 
-## 3. 主流程
+## 3. 目录导入流程
 
-### 3.1 翻开知识卡
+```mermaid
+sequenceDiagram
+  actor Learner
+  participant UI as app.js
+  participant Source as content-source.js
+  participant Library as library.js
+
+  Learner->>UI: 选择「高中校内」文件夹
+  UI->>Source: showDirectoryPicker / file input
+  Source-->>Source: 递归扫描 .html
+  Source-->>UI: records[{path,size,handle/file}]
+  UI->>Library: buildLibrary(records)
+  Library->>Library: 过滤非全文 / 归一化路径 / 清洗标题
+  Library-->>UI: { tree, documents }
+  UI->>Learner: 学科 → 教材 → 章节 → 文档
+```
+
+### 过滤规则
+
+纳入：
+
+- 五科目录下的完整 HTML；
+- 全书合订本、全书速览、分章整理、示意图总览、重点速记、专题资料。
+
+排除：
+
+- `原页总览`、`讲义原页`、`打印版`、`无插图版`；
+- `绘图工具`、`原稿备份`、`_work`、`pdf_pages` 等中间目录；
+- 非五科目录、Markdown、PDF、图片。
+
+当前实测：**110 个 HTML → 99 篇复习资料 → 50 个层级目录**。
+
+## 4. 通读流程
 
 ```mermaid
 flowchart LR
-  A[UI: data-card click] --> B[app.openCard]
-  B --> C[engine.openCard]
-  C --> D[cases.cards 查看次数 +1]
-  D --> E[记录当日唯一卡片]
-  E --> F[首次查看奖励]
-  F --> G[每日航线结算]
-  G --> H[成就与等级结算]
-  H --> I[返回 effects]
-  I --> J[toast + celebrate]
-  I --> K[store.saveProgress]
-  K --> L[renderAll + 详情弹窗]
+  A[点击 tree-doc] --> B[engine.openDocument]
+  B --> C[读取 File → Blob URL]
+  C --> D[iframe 沙箱加载完整 HTML]
+  D --> E[页内阅读桥 postMessage 比例]
+  E --> F{到达底部?}
+  F -- 否 --> E
+  F -- 是 --> G[engine.completeDocument]
+  G --> H[首次通读 + 每日委托 + 成就]
+  H --> I[保存 + 目录标记已读 + 奖励反馈]
 ```
 
-### 3.2 掌握、打卡与宝箱
+完成条件：
 
-- `engine.setStatus({status:'mastered'})`：只有 `masteredAt` 不存在时，才发放首次掌握奖励、计入当日掌握数并结算每日航线；切回学习中再掌握不会重复。
-- `engine.checkIn`：同日重复调用返回 `already-checked-in`，不改变 XP。
-- `engine.openChest`：要求当日 3 项委托全部完成，并且 `chest:YYYY-MM-DD` 未在账本中；开箱后不可重复。
-- `engine.redeem`：余额、一次性权益、可重复权益和兑换流水都在同一个操作里完成。
+- 文档根滚动区或大型内部滚动容器到达约 98.5%；
+- 短文档无法滚动时，停留约 2.8 秒；
+- 父页面校验 `postMessage` 的 iframe source 与一次性 token；
+- 同一阅读会话只触发一次 `completeDocument`；
+- 阅读桥没有回传时显示明确提示，不伪造完成。
 
-### 3.3 账号切换
-
-```mermaid
-stateDiagram-v2
-  [*] --> Guest: 首次打开
-  Guest --> Account: 注册（导入访客进度）
-  Guest --> Account: 登录
-  Account --> Guest: 退出（访客进度独立保留）
-  Account --> Account: 刷新（session 恢复）
-```
-
-所有账号的进度使用独立键：`zhiyu.progress.v1.<userId>`；访客使用 `zhiyu.guest.v1`。
-
-## 4. 进度状态
+## 5. 进度状态
 
 ```text
-version, xp, coins, lastLevel, createdAt
+version=3, xp, coins, lastLevel, createdAt
 profile { name, bio, theme }
-cards[cardId] { views, status, lastView, masteredAt? }
+documents[path] {
+  opens, reads, lastOpen, lastRead, title, subject
+}
 checkins[YYYY-MM-DD] { ts }
-daily[YYYY-MM-DD] { views[], mastered[] }
-achievements[achievementId] = unlockedAt
-awarded[rewardKey] = grantedAt          # 幂等账本
-rewards[rewardId] = count
-redemptions[] { id, rewardId, name, cost, ts }
-transactions[] { id, ts, label, xp, coins, balance }
+daily[YYYY-MM-DD] { reads: [path] }
+achievements[id] = unlockedAt
+awarded[key] = grantedAt
+rewards[id] = count
+redemptions[] / transactions[]
 ```
 
-`awarded` 是奖励幂等性的核心：所有一次性奖励都通过带唯一键的 `grant()` 写入，重复事件不会再次改变 XP 或叶币。
+阅读相关的幂等键：
 
-## 5. 规则索引
+- `read:<path>`：一篇资料的首次通读奖励；
+- `quest:read1:<day>`：当天第一篇完成委托；
+- `quest:read2:<day>`：当天第二篇完成委托；
+- `quest:all:<day>`：当天全部委托；
+- `chest:<day>`：当天宝箱；
+- `achievement:<id>`：成就。
+
+## 6. 规则索引
 
 | 规则 | 实现 | 测试 |
 | --- | --- | --- |
-| 首次查看 +5 XP / +1 叶币 | `engine.openCard` | `opening a card...` |
-| 查看三张不同卡 +30 / +10 | `engine.settleDaily` | `three cards...` |
-| 首次掌握 +15 / +4 | `engine.setStatus` | `mastery bonus...` |
-| 掌握一张卡 +25 / +8 | `engine.settleDaily` | `three cards...` |
-| 打卡 +20 / +10 | `engine.checkIn` | `three cards...` |
-| 全航线 +40 / +15 | `engine.settleDaily` | `three cards...` |
+| 打开不奖励 | `engine.openDocument` | `opening a document...` |
+| 首次通读 +15 / +4 | `engine.completeDocument` | `completing a document...` |
+| 重读不重复发首次奖励 | `awarded['read:<path>']` | `re-reading...` |
+| 每日第一篇 +30 / +10 | `engine.settleDaily` | `two distinct documents...` |
+| 每日第二篇 +25 / +8 | `engine.settleDaily` | `two distinct documents...` |
+| 打卡 +20 / +10 | `engine.checkIn` | `two distinct documents...` |
+| 全航线 +40 / +15 | `engine.settleDaily` | `two distinct documents...` |
 | 宝箱 +20 / +10 | `engine.openChest` | `daily chest...` |
-| 成就 automatic grant | `engine.evaluateAchievements` | `streak...` |
-| 等级阈值 | `engine.levelInfo` | `levels use...` |
-| 余额与一次性权益 | `engine.redeem` | `rewards enforce...` |
+| 五科成就 | `engine.evaluateAchievements` | `five subjects...` |
+| 兑换余额与权益 | `engine.redeem` | `rewards enforce...` |
+| 目录过滤 / 标题 / 层级 | `library.js` | 7 条 `library.test.js` |
 
-## 6. 扩展位置
+## 7. 扩展位置
 
-- **新增知识卡**：只改 `src/data.js` 的 `cards`，保证 `id` 唯一，并包含 `title/summary/core/pitfall/question/answer/source`。
-- **新增成就**：在 `ACHIEVEMENTS` 增加声明式定义，`metric` 必须是 `uniqueCards | subjectsSeen | mastered | streakPeak | level`。
-- **新增奖励**：在 `REWARDS` 增加项；如需装扮副作用，在 `renderProfile` 或场景渲染中读取 `state.rewards[rewardId]`。
-- **新增存储后端**：实现与 `createStore` 相同的接口，替换 `app.js` 中的注入实例；学习引擎无需修改。
-- **修改等级曲线**：只改 `engine.levelInfo`，并增补边界测试。
+- **增加筛选规则**：改 `src/library.js` 的 `SKIPPED_FOLDERS` / `SKIPPED_FILE`，并补目录测试。
+- **新增成就**：在 `src/data.js` 增加声明式定义；`metric` 只能是 `documents`、`subjectsSeen`、`streakPeak`、`level`。
+- **新增角色装扮**：在 `assets/characters/` 增加原创 SVG，并让场景或角色卡引用对应 reward ID。
+- **新增存储后端**：实现与 `createStore` 同接口的模块并注入 `app.js`；引擎不需要改。
+- **修改完成判定**：集中修改 `src/app.js` 的 `readerScrollMetrics` 与文档中的完成条件，不要改引擎奖励接口。
+- **增加浏览器烟测**：用 `tests/fixtures/高中校内/` 作为最小资料库，验证导入 → 展开 → 打开 Blob iframe → 滚到底 → 奖励。
