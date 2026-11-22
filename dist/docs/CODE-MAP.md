@@ -11,10 +11,10 @@
 | `src/storage.js` | 账号、会话、按学习者隔离的进度存取 | UI |
 | `src/library.js` | 文件路径过滤、标题清洗、分层目录和搜索 | UI、测试 |
 | `src/content-source.js` | 目录句柄、FileList、Blob 读取、IndexedDB 句柄 | UI |
-| `src/app.js` | DOM 渲染、目录状态、阅读器滚动检测、账号、事件 | 浏览器 |
+| `src/app.js` | DOM 渲染、科目大纲、星图导航、阅读器滚动桥、账号、事件 | 浏览器 |
 | `scripts/build.mjs` | 将源文件内联为单文件并二次编译校验 | 发布流程 |
 | `tests/*.test.js` | 领域、索引、仓储共 23 条测试 | `npm test` |
-| `dist/index.html` | 约 193 KB 的自包含应用外壳 | 终端用户 |
+| `dist/index.html` | 约 211 KB 的自包含应用外壳 | 终端用户 |
 
 ## 2. 依赖方向
 
@@ -83,7 +83,24 @@ sequenceDiagram
 
 当前实测：**110 个 HTML → 99 篇复习资料 → 50 个层级目录**。
 
-## 4. 通读流程
+## 4. 两种导航
+
+```mermaid
+flowchart LR
+  LIB[library.tree] --> OUTLINE[Outline：科目 tab + 折叠树]
+  LIB --> GRAPH[星图：当前层 + 子节点]
+  OUTLINE --> DOC[openDocument(path)]
+  GRAPH -->|点击分支| GRAPH
+  GRAPH -->|点击文档| DOC
+  DOC --> READER[完整 HTML 阅读器]
+```
+
+- 星图层级只存在于 `graphTrail`，不进入 `state`；
+- 分支点击进入下一层，面包屑可跳回任意祖先；
+- 文档节点与大纲共用 `openDocument(path)`；
+- 返回星图时保留之前的层级和面包屑。
+
+## 5. 通读流程
 
 ```mermaid
 flowchart LR
@@ -106,7 +123,7 @@ flowchart LR
 - 同一阅读会话只触发一次 `completeDocument`；
 - 阅读桥没有回传时显示明确提示，不伪造完成。
 
-## 5. 进度状态
+## 6. 进度状态
 
 ```text
 version=3, xp, coins, lastLevel, createdAt
@@ -131,7 +148,7 @@ redemptions[] / transactions[]
 - `chest:<day>`：当天宝箱；
 - `achievement:<id>`：成就。
 
-## 6. 规则索引
+## 7. 规则索引
 
 | 规则 | 实现 | 测试 |
 | --- | --- | --- |
@@ -147,7 +164,7 @@ redemptions[] / transactions[]
 | 兑换余额与权益 | `engine.redeem` | `rewards enforce...` |
 | 目录过滤 / 标题 / 层级 | `library.js` | 7 条 `library.test.js` |
 
-## 7. 扩展位置
+## 8. 扩展位置
 
 - **增加筛选规则**：改 `src/library.js` 的 `SKIPPED_FOLDERS` / `SKIPPED_FILE`，并补目录测试。
 - **新增成就**：在 `src/data.js` 增加声明式定义；`metric` 只能是 `documents`、`subjectsSeen`、`streakPeak`、`level`。

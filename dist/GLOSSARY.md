@@ -7,6 +7,9 @@
 | **复习文档（Review Document）** | 用户本机的一篇完整复习 HTML。路径是它在进度中的稳定 ID。 | `records[]` → `documents` |
 | **复习资料库（Review Library）** | 通过文件夹权限连接的完整复习文档集合。内容不进入公开仓库。 | `src/content-source.js` |
 | **分层索引（Review Tree）** | 由文件路径生成的“学科 → 教材 / 专题 → 章节 → 文档”结构。 | `src/library.js` |
+| **大纲视图（Outline View）** | 按学科分 tab、可逐级展开或收起的目录树；适合扫描和搜索。 | `renderLibrary()` |
+| **星图视图（Constellation View）** | 每次只显示当前层级及直属子节点，以中心节点和连线呈现；点击分支逐层深入。 | `renderGraph()` |
+| **图形层级（Graph Level）** | 星图当前的中心节点及其直接子节点；不写入学习进度。 | `graphTrail` |
 | **内容来源（Content Source）** | 提供文件记录与读取能力的**适配器**；现有目录句柄和 FileList 两种。 | `ZYContentSource` |
 | **学习引擎（Learning Engine）** | 负责通读、每日委托、宝箱、成就和兑换规则的深层**模块**。 | `src/engine.js` |
 | **进度状态（Progress State）** | 某学习者的完整可序列化数据：XP、叶币、文档进度、打卡、流水、成就与兑换。 | `engine.defaultState()` |

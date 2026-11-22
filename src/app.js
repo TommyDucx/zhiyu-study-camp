@@ -35,6 +35,7 @@ const ICONS = {
   frame: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4 4l2 2M18 18l2 2M20 4l-2 2M6 18l-2 2"/>',
   feather: '<path d="M20 4c-7-2-14 4-14 10 0 3 2 5 5 5 7 0 10-9 9-15z"/><path d="M3 21L16 8M8 16h7M11 12V7"/>',
   refresh: '<path d="M20 6v5h-5M4 18v-5h5"/><path d="M6.1 9a7 7 0 0111.4-2.2L20 11M4 13l2.5 4.2A7 7 0 0017.9 15"/>',
+  network: '<circle cx="5" cy="12" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M7 11l9.5-4M7 13l9.5 4"/>',
 };
 
 function icon(name) {
@@ -77,7 +78,12 @@ const library = {
   sourceName: '',
 };
 let expandedNodes = new Set();
+let librarySubject = '全部';
 let pendingDirectoryHandle = null;
+let graphOpen = false;
+let graphWasOpen = false;
+let graphAfterImport = false;
+let graphTrail = [];
 let activeDocument = null;
 let activeDocumentUrl = null;
 let activeDocumentCompleted = false;
@@ -241,11 +247,19 @@ function indexRecords(records, sourceName, mode = 'session') {
   library.total = built.total;
   library.ignored = built.ignored;
   library.sourceName = sourceName || '本机复习资料';
+  librarySubject = '全部';
   expandedNodes = new Set(built.tree.map((subject) => subject.id));
+  if (graphOpen) closeGraph();
+  graphTrail = [];
+  graphWasOpen = false;
   setLibrarySource(library.sourceName, `${built.total} 篇 · 已连接`, mode === 'persistent' ? 'connected' : 'session');
   $('#nav-library-count').textContent = String(built.total);
   renderLibrary();
   renderAll();
+  if (graphAfterImport) {
+    graphAfterImport = false;
+    openGraph({ reset: true });
+  }
   toast('复习目录已建立', `已载入 ${built.total} 篇资料。只有从头读到尾才会记为读完。`);
   return true;
 }
@@ -337,7 +351,28 @@ function filterTreeByStatus(tree, status) {
   return tree.map(visit).filter(Boolean);
 }
 
+function renderSubjectTabs() {
+  const container = $('#library-subjects');
+  if (!library.total) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+  const counts = Object.fromEntries(library.tree.map((subject) => [subject.name, subject.count]));
+  const tabs = [
+    { name: '全部', count: library.total, color: '#ffc107' },
+    ...Object.keys(SUBJECTS).filter((subject) => counts[subject]).map((subject) => ({
+      name: subject,
+      count: counts[subject],
+      color: SUBJECTS[subject],
+    })),
+  ];
+  container.innerHTML = tabs.map((tab) => `<button class="subject-tab ${librarySubject === tab.name ? 'active' : ''}" data-subject="${esc(tab.name)}" style="--subject-color:${tab.color}"><i></i>${tab.name}<b>${tab.count}</b></button>`).join('');
+}
+
 function renderLibrary() {
+  renderSubjectTabs();
   const query = $('#library-search')?.value || '';
   const status = $('#read-filter')?.value || 'all';
   if (!library.total) {
@@ -346,6 +381,7 @@ function renderLibrary() {
     return;
   }
   let tree = query ? ZYLibrary.filterLibrary(library, query).tree : library.tree;
+  if (librarySubject !== '全部') tree = tree.filter((subject) => subject.name === librarySubject);
   if (status !== 'all') tree = filterTreeByStatus(tree, status);
   const totalVisible = tree.reduce((sum, subject) => sum + subject.count, 0);
   $('#library-count').textContent = `${totalVisible} 篇`;
@@ -373,7 +409,134 @@ function findDocument(path) {
   return library.documents.get(path) || state.documents[path] || null;
 }
 
+function graphRootNode() {
+  return {
+    type: 'root',
+    id: '__root__',
+    name: '复习总目录',
+    subject: '',
+    children: library.tree,
+    documents: [],
+    count: library.total,
+  };
+}
+
+function currentGraphNode() {
+  return graphTrail.length ? graphTrail.at(-1) : graphRootNode();
+}
+
+function graphChildNodes(node) {
+  return [...node.children, ...node.documents.map((doc) => ({ ...doc, type: 'doc' }))];
+}
+
+function openGraph({ reset = false } = {}) {
+  if (!library.total) {
+    graphAfterImport = true;
+    toast('请先连接复习资料库', '星图会从五科总目录开始，逐层展示教材、章节与完整资料。');
+    chooseLibrary();
+    return;
+  }
+  if (reset) graphTrail = [];
+  graphOpen = true;
+  $('.library-shell').classList.add('graphing');
+  $('#page-library').classList.add('reader-mode');
+  $('#graph-explorer').classList.remove('hidden');
+  $('#reader-empty').classList.add('hidden');
+  $('#reader-active').classList.add('hidden');
+  const toggle = $('#toggle-graph');
+  toggle.classList.add('active');
+  toggle.innerHTML = icon('book') + '目录';
+  renderGraph();
+}
+
+function closeGraph() {
+  graphOpen = false;
+  graphWasOpen = false;
+  $('#graph-explorer').classList.add('hidden');
+  $('#reader-empty').classList.remove('hidden');
+  $('#reader-active').classList.add('hidden');
+  $('.library-shell').classList.remove('graphing');
+  $('#page-library').classList.remove('reader-mode');
+  const toggle = $('#toggle-graph');
+  toggle.classList.remove('active');
+  toggle.innerHTML = icon('network') + '星图';
+  renderLibrary();
+}
+
+function renderGraph() {
+  const node = currentGraphNode();
+  const children = graphChildNodes(node);
+  const trailSubject = graphTrail.find((item) => item.type === 'subject')?.name || '';
+  const nodeSubject = node.subject || trailSubject;
+  const nodeColor = node.type === 'subject' ? (SUBJECTS[node.name] || '#ffc107') : (SUBJECTS[nodeSubject] || '#ffc107');
+  $('#graph-level-title').textContent = node.type === 'root' ? '复习总目录' : node.name;
+  $('#graph-level-copy').textContent = node.type === 'root'
+    ? `五个学科 · ${library.total} 篇完整资料 · ${library.tree.length} 个根分支`
+    : `${children.length} 个分支 · 共 ${node.count} 篇资料`;
+  $('#graph-back').disabled = graphTrail.length === 0;
+  $('#graph-back').style.opacity = graphTrail.length ? '1' : '.35';
+
+  const crumbItems = [{ name: '总目录', depth: -1 }, ...graphTrail.map((item, index) => ({ name: item.name, depth: index }))];
+  $('#graph-breadcrumb').innerHTML = crumbItems.map((item, index) => `${index ? '<span class="graph-crumb-sep">/</span>' : ''}<button class="graph-crumb ${index === crumbItems.length - 1 ? 'current' : ''}" data-graph-depth="${item.depth}">${esc(item.name)}</button>`).join('');
+
+  const count = children.length;
+  const positions = count > 6
+    ? children.map((child, index) => {
+      const leftCount = Math.ceil(count / 2);
+      const left = index < leftCount;
+      const row = left ? index : index - leftCount;
+      const rows = left ? leftCount : count - leftCount;
+      return { x: left ? 16 : 84, y: 10 + ((row + 0.5) / rows) * 80 };
+    })
+    : children.map((child, index) => {
+      const angle = (-90 + index * (360 / Math.max(1, count))) * Math.PI / 180;
+      return {
+        x: 50 + Math.cos(angle) * 36,
+        y: 50 + Math.sin(angle) * 35,
+      };
+    });
+  $('#graph-links').innerHTML = positions.map((point, index) => {
+    const color = children[index].type === 'subject' ? SUBJECTS[children[index].name] : nodeColor;
+    return `<line x1="50" y1="50" x2="${point.x.toFixed(2)}" y2="${point.y.toFixed(2)}" style="--line-color:${color}"/>`;
+  }).join('');
+
+  const center = `<div class="graph-center" style="left:50%;top:50%;--node-color:${nodeColor}"><span class="graph-center-kicker">${node.type === 'root' ? 'CAMP MAP / 五科总览' : node.type === 'subject' ? 'SUBJECT / 学科' : 'BRANCH / 分支'}</span><strong>${esc(node.name)}</strong><small>${node.count} 篇资料</small></div>`;
+  const nodes = children.map((child, index) => {
+    const point = positions[index];
+    const color = child.type === 'subject' ? (SUBJECTS[child.name] || '#ffc107') : (SUBJECTS[child.subject || nodeSubject] || nodeColor);
+    if (child.type === 'doc') {
+      const entry = state.documents[child.path];
+      const reads = Number(entry?.reads) || 0;
+      return `<button class="graph-node doc ${reads ? 'read' : ''}" data-doc-path="${esc(child.path)}" style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;--node-color:${color}" title="${esc(child.title)} · ${child.badge}"><span class="graph-node-badge">${esc(child.badge)}</span><span class="graph-node-kicker">${reads ? `已通读 ${reads} 次` : '完整资料'}</span><strong>${esc(child.title)}</strong><small>${humanSize(child.size) || 'HTML'} · 打开全文</small></button>`;
+    }
+    const detail = child.children.length
+      ? `${child.children.length} 个子分支 · ${child.documents.length} 篇直属`
+      : `${child.documents.length} 篇资料`;
+    return `<button class="graph-node" data-graph-node="${esc(child.id)}" style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;--node-color:${color}" title="${esc(child.name)} · ${child.count} 篇"><span class="graph-node-badge">${child.count} 篇</span><span class="graph-node-kicker">${child.type === 'subject' ? '学科分支' : '目录分支'}</span><strong>${esc(child.name)}</strong><small>${detail} · 点击进入</small></button>`;
+  }).join('');
+  $('#graph-canvas').innerHTML = center + nodes + (children.length ? '' : '<div class="graph-node-empty">这一层已经没有更多分支。</div>');
+  const stage = $('#graph-stage');
+  stage.scrollTop = 0;
+}
+
+function navigateGraph(id) {
+  const node = currentGraphNode();
+  const next = node.children.find((child) => child.id === id);
+  if (!next) return;
+  graphTrail.push(next);
+  renderGraph();
+}
+
 async function openDocument(path) {
+  if (graphOpen) {
+    graphWasOpen = true;
+    graphOpen = false;
+    $('#graph-explorer').classList.add('hidden');
+    $('.library-shell').classList.remove('graphing');
+    const toggle = $('#toggle-graph');
+    toggle.classList.remove('active');
+    toggle.innerHTML = icon('network') + '星图';
+  }
   const doc = findDocument(path);
   if (!doc) {
     toast('没有找到这篇资料', '请重新连接资料库后再试。');
@@ -507,6 +670,9 @@ function closeReader() {
   $('.library-shell').classList.remove('reading');
   $('#page-library').classList.remove('reader-mode');
   renderLibrary();
+  const returnToGraph = graphWasOpen;
+  graphWasOpen = false;
+  if (returnToGraph) openGraph({ reset: false });
 }
 
 function randomDocument() {
@@ -1029,6 +1195,49 @@ function bindEvents() {
     }
     const firstUnread = [...library.documents.values()].find((doc) => !(Number(state.documents[doc.path]?.reads) > 0));
     if (firstUnread) openDocument(firstUnread.path);
+  });
+  $('#toggle-graph').addEventListener('click', () => {
+    if (graphOpen) {
+      closeGraph();
+      return;
+    }
+    if (activeDocument) closeReader();
+    if (!graphOpen) openGraph({ reset: false });
+  });
+  $('#open-graph-empty').addEventListener('click', () => openGraph({ reset: false }));
+  $('#exit-graph').addEventListener('click', closeGraph);
+  $('#graph-home').addEventListener('click', () => {
+    graphTrail = [];
+    renderGraph();
+  });
+  $('#graph-back').addEventListener('click', () => {
+    if (!graphTrail.length) return;
+    graphTrail.pop();
+    renderGraph();
+  });
+  $('#graph-breadcrumb').addEventListener('click', (event) => {
+    const crumb = event.target.closest('[data-graph-depth]');
+    if (!crumb) return;
+    const depth = Number(crumb.dataset.graphDepth);
+    graphTrail = depth < 0 ? [] : graphTrail.slice(0, depth + 1);
+    renderGraph();
+  });
+  $('#graph-canvas').addEventListener('click', (event) => {
+    const doc = event.target.closest('[data-doc-path]');
+    if (doc) {
+      openDocument(doc.dataset.docPath);
+      return;
+    }
+    const node = event.target.closest('[data-graph-node]');
+    if (node) navigateGraph(node.dataset.graphNode);
+  });
+  $('#library-subjects').addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-subject]');
+    if (!tab) return;
+    librarySubject = tab.dataset.subject;
+    const subject = library.tree.find((item) => item.name === librarySubject);
+    if (subject) expandedNodes.add(subject.id);
+    renderLibrary();
   });
   $('#random-review').addEventListener('click', randomDocument);
   $('#pick-library').addEventListener('click', chooseLibrary);

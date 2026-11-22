@@ -137,10 +137,11 @@
   <div class="dashboard-grid"><div class="panel"><div class="panel-head"><h2>最近读完的复习</h2><button class="text-btn" data-go="library">进入目录 →</button></div><div class="recent-list" id="recent-list"></div></div><div class="panel"><div class="panel-head"><h2>近七日阅读节奏</h2><small>完整读完的不同资料 / 天</small></div><div class="week-chart" id="week-chart"></div><div class="mini-honors" id="mini-honors"></div></div></div>
 </section>
 <section class="page" id="page-library">
-  <div class="section-intro library-intro"><div><div class="eyebrow">The complete review library</div><h1>复习图鉴</h1><p>一层一层展开学科、教材与章节，进入完整 HTML 原文。</p></div><div class="library-intro-actions"><button class="button ghost" id="random-review"><i data-icon="shuffle"></i>随机读一篇</button><button class="button dark pick-library" id="pick-library"><i data-icon="upload"></i>连接资料库</button></div></div>
+  <div class="section-intro library-intro"><div><div class="eyebrow">The complete review library</div><h1>复习图鉴</h1><p>一层一层展开学科、教材与章节，进入完整 HTML 原文。</p></div><div class="library-intro-actions"><button class="button ghost" id="toggle-graph"><i data-icon="network"></i>星图</button><button class="button ghost" id="random-review"><i data-icon="shuffle"></i>随机读一篇</button><button class="button dark pick-library" id="pick-library"><i data-icon="upload"></i>连接资料库</button></div></div>
   <div class="library-shell">
     <aside class="tree-panel">
       <div class="tree-source"><div><span class="tree-source-label">LOCAL REVIEW LIBRARY</span><strong id="library-source-title">资料库未连接</strong></div><span class="source-state" id="library-source-status">离线</span></div>
+      <div class="subject-tabs" id="library-subjects" aria-label="按科目筛选目录"></div>
       <div class="tree-toolbar"><div class="search-box"><i data-icon="search"></i><input id="library-search" type="search" placeholder="搜索章节或文件名…" aria-label="搜索复习目录"></div><div class="tree-tools-row"><select class="select" id="read-filter" aria-label="阅读状态筛选"><option value="all">全部篇目</option><option value="unread">尚未读完</option><option value="read">已经读完</option></select><button class="text-btn" id="expand-all">展开</button><button class="text-btn" id="collapse-all">收起</button><button class="text-btn" id="import-library-files" title="不保存目录权限，仅本次导入">导入</button></div></div>
       <div class="tree-scroll" id="library-tree">
         <div class="library-empty-tree"><div class="empty-book">ED</div><strong>还没有连接复习资料</strong><p>选择本机的「高中校内」文件夹，或直接选择某一学科文件夹。文件只在本机读取，不会上传。</p><button class="button primary pick-library">选择文件夹</button><small>支持 Chrome / Edge 持久连接；其他浏览器可临时导入。</small></div>
@@ -148,9 +149,16 @@
       <div class="tree-footer"><span id="library-count">0 篇</span><span id="library-progress-label">0 已读完</span></div>
     </aside>
     <section class="reader-panel" id="reader-panel" aria-label="完整复习资料阅读器">
+      <div class="graph-explorer hidden" id="graph-explorer">
+        <header class="graph-head"><button class="reader-back" id="graph-back" aria-label="返回上一层"><i data-icon="left"></i></button><nav class="graph-breadcrumb" id="graph-breadcrumb" aria-label="星图层级"></nav><button class="text-btn" id="graph-home">总目录</button><button class="icon-btn" id="exit-graph" aria-label="返回目录"><i data-icon="close"></i></button></header>
+        <div class="graph-title-row"><div><span class="eyebrow">CONSTELLATION MAP</span><h2 id="graph-level-title">复习总目录</h2></div><p id="graph-level-copy">从五科总览开始，点击一个节点进入下一层。</p></div>
+        <div class="graph-stage" id="graph-stage"><svg class="graph-links" id="graph-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg><div class="graph-canvas" id="graph-canvas"></div></div>
+        <footer class="graph-foot"><span class="graph-legend"><i class="legend-folder"></i>分支节点</span><span class="graph-legend"><i class="legend-doc"></i>完整资料</span><span class="graph-hint">点击分支逐层深入 · 点击资料打开全文</span></footer>
+      </div>
       <div class="reader-empty" id="reader-empty">
         <div class="reader-empty-art"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="#hero-sprite" x="18" y="2" width="54" height="81"/><use href="#cat-sprite" x="4" y="62" width="35" height="28"/></svg><span class="reader-orbit">01</span></div>
         <div class="eyebrow">Choose a trail</div><h2>从左侧目录挑一篇，<br>完整地读到底。</h2><p>打开原文后，页面会记录你的滚动位置。只有从开头读到最后，才算完成一次复习并获得奖励。</p>
+        <button class="button ghost reader-graph-cta" id="open-graph-empty"><i data-icon="network"></i>用星图一层层查找</button>
         <div class="reader-rules"><span><b>01</b> 逐层展开目录</span><span><b>02</b> 从头读到尾</span><span><b>03</b> 自动记录成长</span></div>
       </div>
       <div class="reader-active hidden" id="reader-active">

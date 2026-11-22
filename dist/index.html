@@ -195,7 +195,66 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:1180px){.library-shell{grid-template-columns:340px 1fr}.character-sheet{grid-template-columns:200px 1fr}.character-meta{display:none}}
 @media(max-width:900px){.library-shell{grid-template-columns:310px 1fr;height:calc(100vh - 190px);min-height:520px}.reader-rules{display:none}.character-sheet{grid-template-columns:180px 1fr}.character-copy{padding:20px}.character-copy h2{font-size:27px}.equipment-slot{min-width:115px}.reader-progress{flex-basis:150px}}
 @media(max-width:640px){.library-intro{gap:14px}.library-intro-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}#page-library.reader-mode .library-intro{display:none}.library-shell{display:block;height:auto;min-height:0}.tree-panel{min-height:520px;height:calc(100vh - 235px)}.reader-panel{display:none;min-height:calc(100dvh - 168px);height:calc(100dvh - 168px)}.library-shell.reading .tree-panel{display:none}.library-shell.reading .reader-panel{display:flex}.reader-head{min-height:56px;padding:8px 10px}.reader-heading h2{font-size:14px}.reader-head-actions{gap:4px}.reader-read-count{display:none}.reader-foot{gap:8px;padding:8px 10px}.reader-progress{flex:0 0 130px}.reader-foot p{font-size:8px}.reader-rules{display:flex;gap:5px}.reader-rules span{font-size:7px;padding:5px 6px}.reader-empty{padding:30px 16px}.reader-empty-art{width:110px;height:110px}.reader-empty-art svg{width:85px;height:100px}.reader-empty h2{font-size:25px}.reader-empty>p{font-size:10px}.character-sheet{grid-template-columns:110px 1fr;min-height:230px}.character-stage{min-height:230px}.pixel-portrait{width:86px;height:156px}.pixel-portrait svg{width:78px;height:142px}.character-copy{padding:17px 14px}.character-copy h2{font-size:25px}.character-copy>p{font-size:10px;margin-bottom:11px}.character-traits{display:none}.equipment-row{display:grid;grid-template-columns:1fr 1fr}.equipment-slot{min-width:0;grid-template-columns:24px 1fr;padding:5px}.equipment-slot b{display:none}.equipment-slot small{font-size:8px}.equip-icon{width:23px;height:23px;font-size:10px}.character-camp-label{font-size:6px;left:5px}.character-shadow{width:80px;bottom:21px}.tree-group>summary{font-size:11px;min-height:33px}.tree-doc{font-size:10px;padding-top:7px;padding-bottom:7px}}
-@media(prefers-reduced-motion:reduce){.tree-caret{transition:none}.reader-progress-fill{transition:none}}
+@media(prefers-reduced-motion:reduce){.tree-caret{transition:none}.reader-progress-fill{transition:none}.graph-node,.graph-center{animation:none}}
+
+/* ── Subject filter + constellation explorer ─────────────────────────── */
+.subject-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:8px 11px;border-bottom:1px solid #343954;background:#1b1e2c}
+.subject-tab{display:flex;align-items:center;gap:4px;border:1px solid #3c4260;background:#171a27;color:#aeb3c9;padding:4px 7px;font-family:var(--mono);font-size:8px;line-height:1;white-space:nowrap}
+.subject-tab i{width:5px;height:5px;background:var(--subject-color,#ffc107);box-shadow:1px 1px 0 #000}
+.subject-tab b{font-weight:400;color:#777f9f;font-size:7px}
+.subject-tab:hover{border-color:#696f8d;color:#f0edf5}
+.subject-tab.active{border-color:#8a7130;background:#302b1d;color:#ffe082}
+.subject-tab.active b{color:#d4b85f}
+.reader-graph-cta{margin-top:18px}
+.graph-explorer{display:flex;flex-direction:column;flex:1;min-height:0;background:radial-gradient(circle at 50% 44%,rgba(98,184,255,.08),transparent 45%),linear-gradient(160deg,#1d2030,#131522)}
+.graph-explorer.hidden{display:none}
+.graph-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #2f334b;background:linear-gradient(180deg,#232639,#1b1e2d);flex:0 0 auto;min-height:55px}
+.graph-head .icon-btn{color:#c7c4d3}
+.graph-head .text-btn{font-family:var(--mono);font-size:8px;color:#ffd568;white-space:nowrap}
+.graph-breadcrumb{min-width:0;flex:1;display:flex;align-items:center;gap:4px;overflow:auto;scrollbar-width:none;white-space:nowrap}
+.graph-breadcrumb::-webkit-scrollbar{display:none}
+.graph-crumb{border:1px solid transparent;background:transparent;color:#9097b4;font-size:10px;padding:3px 5px;white-space:nowrap}
+.graph-crumb:hover{color:#ffe082;border-color:#4c4a31}
+.graph-crumb.current{color:#f1e4c5;background:#2b2b37;border-color:#4b4f68}
+.graph-crumb-sep{color:#555c7b;font-family:var(--mono);font-size:8px}
+.graph-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:15px 20px 8px;flex:0 0 auto}
+.graph-title-row h2{font-family:var(--display);font-size:25px;color:#f4e6c5;margin:0;text-shadow:2px 2px 0 #000}
+.graph-title-row p{margin:0;color:#858ca8;font-size:10px;max-width:360px;text-align:right}
+.graph-title-row .eyebrow{margin-bottom:2px;font-size:8px}
+.graph-stage{position:relative;flex:1;min-height:390px;overflow:hidden;margin:0 8px;border:1px solid #30354d;background-image:radial-gradient(circle at center,rgba(255,193,7,.05),transparent 46%),linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:auto,18px 18px,18px 18px}
+.graph-stage:before,.graph-stage:after{content:"";position:absolute;background:#3f4561;pointer-events:none}
+.graph-stage:before{left:50%;top:14px;bottom:14px;width:1px;opacity:.28}
+.graph-stage:after{top:50%;left:14px;right:14px;height:1px;opacity:.28}
+.graph-links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible}
+.graph-links line{stroke:var(--line-color,#545b7a);stroke-width:1.2;stroke-dasharray:3 4;vector-effect:non-scaling-stroke;opacity:.8}
+.graph-canvas{position:absolute;inset:0;z-index:1}
+.graph-center,.graph-node{position:absolute;transform:translate(-50%,-50%);border:2px solid #090a0f;background:linear-gradient(145deg,#2c3045,#202331);box-shadow:inset 2px 2px 0 #4a4f6c,inset -2px -2px 0 #11131c,4px 4px 0 rgba(0,0,0,.38);color:#e7e2ed;text-align:left}
+.graph-center{width:172px;min-height:68px;padding:11px 13px;border-color:#090a0f;background:linear-gradient(145deg,#3b3523,#26251d);box-shadow:inset 2px 2px 0 #76622c,inset -2px -2px 0 #11131c,0 0 26px rgba(255,193,7,.11),5px 5px 0 rgba(0,0,0,.42);z-index:2;animation:graph-layer-in .22s ease-out both}
+.graph-center-kicker,.graph-node-kicker{font-family:var(--mono);font-size:7px;letter-spacing:1px;color:#8b92ae;display:block}
+.graph-center-kicker{color:#d0ae50}
+.graph-center strong{display:block;font-family:var(--display);font-size:17px;color:#ffe082;line-height:1.3;margin:2px 0 1px}
+.graph-center small{font-family:var(--mono);font-size:7px;color:#9b947c}
+.graph-node{width:126px;min-height:50px;padding:7px 8px;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;animation:graph-layer-in .25s ease-out both}
+@keyframes graph-layer-in{from{opacity:0}to{opacity:1}}
+.graph-node:hover,.graph-node:focus-visible{transform:translate(-50%,-50%) translateY(-3px);border-color:var(--node-color,#ffc107);box-shadow:inset 2px 2px 0 #626988,inset -2px -2px 0 #11131c,0 0 18px color-mix(in srgb,var(--node-color,#ffc107) 22%,transparent),5px 5px 0 rgba(0,0,0,.4)}
+.graph-node:before{content:"";position:absolute;left:-2px;top:7px;bottom:7px;width:3px;background:var(--node-color,#ffc107);box-shadow:1px 0 0 #000}
+.graph-node strong{display:block;font-family:var(--display);font-size:11px;line-height:1.35;color:#f2e9d1;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.graph-node small{display:block;font-family:var(--mono);font-size:6.5px;color:#858ca8;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.graph-node .graph-node-badge{float:right;font-family:var(--mono);font-size:6px;color:#d8bd6c;border:1px solid #5e5129;padding:1px 3px;margin-left:4px}
+.graph-node.doc{border-color:#252a3c;background:linear-gradient(145deg,#252a39,#1b202c)}
+.graph-node.doc .graph-node-kicker{color:#c2a85f}
+.graph-node.doc.read .graph-node-kicker{color:#8fe6a9}
+.graph-node:hover small{color:#d9d3bd}
+.graph-node-empty{padding:20px;color:#8e94ad;font-size:11px;text-align:center}
+.graph-foot{display:flex;align-items:center;gap:15px;padding:8px 14px;flex:0 0 auto;border-top:1px solid #2f334b;background:#181b27;color:#7d84a2;font-family:var(--mono);font-size:7px;white-space:nowrap;overflow:hidden}
+.graph-legend{display:flex;align-items:center;gap:5px}
+.graph-legend i{display:inline-block;width:7px;height:7px;border:1px solid #090a0f;background:#6ad99a}
+.graph-legend .legend-doc{background:#ffc107}
+.graph-hint{margin-left:auto;color:#626a89;overflow:hidden;text-overflow:ellipsis}
+#toggle-graph.active{color:#ffe082;border-color:#745f27;background:#322c1d}
+@media(max-width:1180px){.graph-node{width:116px}.graph-center{width:158px}.graph-title-row{padding-left:15px;padding-right:15px}}
+@media(max-width:900px){.library-shell.graphing{grid-template-columns:1fr}.library-shell.graphing .tree-panel{display:none}.graph-title-row p{display:none}.graph-node{width:108px;min-height:48px}.graph-node strong{font-size:10px}.graph-foot{gap:9px}.graph-hint{display:none}}
+@media(max-width:640px){.library-intro-actions{grid-template-columns:1fr 1fr 1fr}.library-intro-actions .button{font-size:9px;padding-left:5px;padding-right:5px}.library-intro-actions .button svg{width:13px;height:13px}.library-shell.graphing .tree-panel{display:none}.library-shell.graphing .reader-panel{display:flex}.graph-head{padding:8px 9px;gap:5px}.graph-head>.text-btn{display:none}.graph-title-row{padding:12px 13px 5px}.graph-title-row h2{font-size:22px}.graph-stage{margin:0 8px;min-height:0;overflow:auto;flex:1}.graph-stage:before,.graph-stage:after,.graph-links{display:none}.graph-canvas{position:relative;inset:auto;min-height:100%;padding:14px 12px 18px;display:flex;flex-direction:column;gap:7px}.graph-center,.graph-node{position:static!important;transform:none!important;width:100%!important;min-height:0}.graph-node:hover,.graph-node:focus-visible{transform:none}.graph-center{width:auto;padding:10px 12px;margin-bottom:2px}.graph-node{padding:8px 11px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px 10px}.graph-node:before{top:0;bottom:0;left:0;width:3px}.graph-node-kicker{grid-column:1}.graph-node strong{grid-column:1;font-size:12px}.graph-node small{grid-column:1;margin-top:0}.graph-node .graph-node-badge{grid-column:2;grid-row:1/4;align-self:center;float:none;margin:0;padding:3px 5px}.graph-foot{padding:7px 10px}.graph-legend{font-size:6px}}
 </style>
 </head>
 <body>
@@ -324,10 +383,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   <div class="dashboard-grid"><div class="panel"><div class="panel-head"><h2>最近读完的复习</h2><button class="text-btn" data-go="library">进入目录 →</button></div><div class="recent-list" id="recent-list"></div></div><div class="panel"><div class="panel-head"><h2>近七日阅读节奏</h2><small>完整读完的不同资料 / 天</small></div><div class="week-chart" id="week-chart"></div><div class="mini-honors" id="mini-honors"></div></div></div>
 </section>
 <section class="page" id="page-library">
-  <div class="section-intro library-intro"><div><div class="eyebrow">The complete review library</div><h1>复习图鉴</h1><p>一层一层展开学科、教材与章节，进入完整 HTML 原文。</p></div><div class="library-intro-actions"><button class="button ghost" id="random-review"><i data-icon="shuffle"></i>随机读一篇</button><button class="button dark pick-library" id="pick-library"><i data-icon="upload"></i>连接资料库</button></div></div>
+  <div class="section-intro library-intro"><div><div class="eyebrow">The complete review library</div><h1>复习图鉴</h1><p>一层一层展开学科、教材与章节，进入完整 HTML 原文。</p></div><div class="library-intro-actions"><button class="button ghost" id="toggle-graph"><i data-icon="network"></i>星图</button><button class="button ghost" id="random-review"><i data-icon="shuffle"></i>随机读一篇</button><button class="button dark pick-library" id="pick-library"><i data-icon="upload"></i>连接资料库</button></div></div>
   <div class="library-shell">
     <aside class="tree-panel">
       <div class="tree-source"><div><span class="tree-source-label">LOCAL REVIEW LIBRARY</span><strong id="library-source-title">资料库未连接</strong></div><span class="source-state" id="library-source-status">离线</span></div>
+      <div class="subject-tabs" id="library-subjects" aria-label="按科目筛选目录"></div>
       <div class="tree-toolbar"><div class="search-box"><i data-icon="search"></i><input id="library-search" type="search" placeholder="搜索章节或文件名…" aria-label="搜索复习目录"></div><div class="tree-tools-row"><select class="select" id="read-filter" aria-label="阅读状态筛选"><option value="all">全部篇目</option><option value="unread">尚未读完</option><option value="read">已经读完</option></select><button class="text-btn" id="expand-all">展开</button><button class="text-btn" id="collapse-all">收起</button><button class="text-btn" id="import-library-files" title="不保存目录权限，仅本次导入">导入</button></div></div>
       <div class="tree-scroll" id="library-tree">
         <div class="library-empty-tree"><div class="empty-book">ED</div><strong>还没有连接复习资料</strong><p>选择本机的「高中校内」文件夹，或直接选择某一学科文件夹。文件只在本机读取，不会上传。</p><button class="button primary pick-library">选择文件夹</button><small>支持 Chrome / Edge 持久连接；其他浏览器可临时导入。</small></div>
@@ -335,9 +395,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
       <div class="tree-footer"><span id="library-count">0 篇</span><span id="library-progress-label">0 已读完</span></div>
     </aside>
     <section class="reader-panel" id="reader-panel" aria-label="完整复习资料阅读器">
+      <div class="graph-explorer hidden" id="graph-explorer">
+        <header class="graph-head"><button class="reader-back" id="graph-back" aria-label="返回上一层"><i data-icon="left"></i></button><nav class="graph-breadcrumb" id="graph-breadcrumb" aria-label="星图层级"></nav><button class="text-btn" id="graph-home">总目录</button><button class="icon-btn" id="exit-graph" aria-label="返回目录"><i data-icon="close"></i></button></header>
+        <div class="graph-title-row"><div><span class="eyebrow">CONSTELLATION MAP</span><h2 id="graph-level-title">复习总目录</h2></div><p id="graph-level-copy">从五科总览开始，点击一个节点进入下一层。</p></div>
+        <div class="graph-stage" id="graph-stage"><svg class="graph-links" id="graph-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg><div class="graph-canvas" id="graph-canvas"></div></div>
+        <footer class="graph-foot"><span class="graph-legend"><i class="legend-folder"></i>分支节点</span><span class="graph-legend"><i class="legend-doc"></i>完整资料</span><span class="graph-hint">点击分支逐层深入 · 点击资料打开全文</span></footer>
+      </div>
       <div class="reader-empty" id="reader-empty">
         <div class="reader-empty-art"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="#hero-sprite" x="18" y="2" width="54" height="81"/><use href="#cat-sprite" x="4" y="62" width="35" height="28"/></svg><span class="reader-orbit">01</span></div>
         <div class="eyebrow">Choose a trail</div><h2>从左侧目录挑一篇，<br>完整地读到底。</h2><p>打开原文后，页面会记录你的滚动位置。只有从开头读到最后，才算完成一次复习并获得奖励。</p>
+        <button class="button ghost reader-graph-cta" id="open-graph-empty"><i data-icon="network"></i>用星图一层层查找</button>
         <div class="reader-rules"><span><b>01</b> 逐层展开目录</span><span><b>02</b> 从头读到尾</span><span><b>03</b> 自动记录成长</span></div>
       </div>
       <div class="reader-active hidden" id="reader-active">
@@ -1549,6 +1616,7 @@ const ICONS = {
   frame: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4 4l2 2M18 18l2 2M20 4l-2 2M6 18l-2 2"/>',
   feather: '<path d="M20 4c-7-2-14 4-14 10 0 3 2 5 5 5 7 0 10-9 9-15z"/><path d="M3 21L16 8M8 16h7M11 12V7"/>',
   refresh: '<path d="M20 6v5h-5M4 18v-5h5"/><path d="M6.1 9a7 7 0 0111.4-2.2L20 11M4 13l2.5 4.2A7 7 0 0017.9 15"/>',
+  network: '<circle cx="5" cy="12" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M7 11l9.5-4M7 13l9.5 4"/>',
 };
 
 function icon(name) {
@@ -1591,7 +1659,12 @@ const library = {
   sourceName: '',
 };
 let expandedNodes = new Set();
+let librarySubject = '全部';
 let pendingDirectoryHandle = null;
+let graphOpen = false;
+let graphWasOpen = false;
+let graphAfterImport = false;
+let graphTrail = [];
 let activeDocument = null;
 let activeDocumentUrl = null;
 let activeDocumentCompleted = false;
@@ -1755,11 +1828,19 @@ function indexRecords(records, sourceName, mode = 'session') {
   library.total = built.total;
   library.ignored = built.ignored;
   library.sourceName = sourceName || '本机复习资料';
+  librarySubject = '全部';
   expandedNodes = new Set(built.tree.map((subject) => subject.id));
+  if (graphOpen) closeGraph();
+  graphTrail = [];
+  graphWasOpen = false;
   setLibrarySource(library.sourceName, `${built.total} 篇 · 已连接`, mode === 'persistent' ? 'connected' : 'session');
   $('#nav-library-count').textContent = String(built.total);
   renderLibrary();
   renderAll();
+  if (graphAfterImport) {
+    graphAfterImport = false;
+    openGraph({ reset: true });
+  }
   toast('复习目录已建立', `已载入 ${built.total} 篇资料。只有从头读到尾才会记为读完。`);
   return true;
 }
@@ -1851,7 +1932,28 @@ function filterTreeByStatus(tree, status) {
   return tree.map(visit).filter(Boolean);
 }
 
+function renderSubjectTabs() {
+  const container = $('#library-subjects');
+  if (!library.total) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+  const counts = Object.fromEntries(library.tree.map((subject) => [subject.name, subject.count]));
+  const tabs = [
+    { name: '全部', count: library.total, color: '#ffc107' },
+    ...Object.keys(SUBJECTS).filter((subject) => counts[subject]).map((subject) => ({
+      name: subject,
+      count: counts[subject],
+      color: SUBJECTS[subject],
+    })),
+  ];
+  container.innerHTML = tabs.map((tab) => `<button class="subject-tab ${librarySubject === tab.name ? 'active' : ''}" data-subject="${esc(tab.name)}" style="--subject-color:${tab.color}"><i></i>${tab.name}<b>${tab.count}</b></button>`).join('');
+}
+
 function renderLibrary() {
+  renderSubjectTabs();
   const query = $('#library-search')?.value || '';
   const status = $('#read-filter')?.value || 'all';
   if (!library.total) {
@@ -1860,6 +1962,7 @@ function renderLibrary() {
     return;
   }
   let tree = query ? ZYLibrary.filterLibrary(library, query).tree : library.tree;
+  if (librarySubject !== '全部') tree = tree.filter((subject) => subject.name === librarySubject);
   if (status !== 'all') tree = filterTreeByStatus(tree, status);
   const totalVisible = tree.reduce((sum, subject) => sum + subject.count, 0);
   $('#library-count').textContent = `${totalVisible} 篇`;
@@ -1887,7 +1990,134 @@ function findDocument(path) {
   return library.documents.get(path) || state.documents[path] || null;
 }
 
+function graphRootNode() {
+  return {
+    type: 'root',
+    id: '__root__',
+    name: '复习总目录',
+    subject: '',
+    children: library.tree,
+    documents: [],
+    count: library.total,
+  };
+}
+
+function currentGraphNode() {
+  return graphTrail.length ? graphTrail.at(-1) : graphRootNode();
+}
+
+function graphChildNodes(node) {
+  return [...node.children, ...node.documents.map((doc) => ({ ...doc, type: 'doc' }))];
+}
+
+function openGraph({ reset = false } = {}) {
+  if (!library.total) {
+    graphAfterImport = true;
+    toast('请先连接复习资料库', '星图会从五科总目录开始，逐层展示教材、章节与完整资料。');
+    chooseLibrary();
+    return;
+  }
+  if (reset) graphTrail = [];
+  graphOpen = true;
+  $('.library-shell').classList.add('graphing');
+  $('#page-library').classList.add('reader-mode');
+  $('#graph-explorer').classList.remove('hidden');
+  $('#reader-empty').classList.add('hidden');
+  $('#reader-active').classList.add('hidden');
+  const toggle = $('#toggle-graph');
+  toggle.classList.add('active');
+  toggle.innerHTML = icon('book') + '目录';
+  renderGraph();
+}
+
+function closeGraph() {
+  graphOpen = false;
+  graphWasOpen = false;
+  $('#graph-explorer').classList.add('hidden');
+  $('#reader-empty').classList.remove('hidden');
+  $('#reader-active').classList.add('hidden');
+  $('.library-shell').classList.remove('graphing');
+  $('#page-library').classList.remove('reader-mode');
+  const toggle = $('#toggle-graph');
+  toggle.classList.remove('active');
+  toggle.innerHTML = icon('network') + '星图';
+  renderLibrary();
+}
+
+function renderGraph() {
+  const node = currentGraphNode();
+  const children = graphChildNodes(node);
+  const trailSubject = graphTrail.find((item) => item.type === 'subject')?.name || '';
+  const nodeSubject = node.subject || trailSubject;
+  const nodeColor = node.type === 'subject' ? (SUBJECTS[node.name] || '#ffc107') : (SUBJECTS[nodeSubject] || '#ffc107');
+  $('#graph-level-title').textContent = node.type === 'root' ? '复习总目录' : node.name;
+  $('#graph-level-copy').textContent = node.type === 'root'
+    ? `五个学科 · ${library.total} 篇完整资料 · ${library.tree.length} 个根分支`
+    : `${children.length} 个分支 · 共 ${node.count} 篇资料`;
+  $('#graph-back').disabled = graphTrail.length === 0;
+  $('#graph-back').style.opacity = graphTrail.length ? '1' : '.35';
+
+  const crumbItems = [{ name: '总目录', depth: -1 }, ...graphTrail.map((item, index) => ({ name: item.name, depth: index }))];
+  $('#graph-breadcrumb').innerHTML = crumbItems.map((item, index) => `${index ? '<span class="graph-crumb-sep">/</span>' : ''}<button class="graph-crumb ${index === crumbItems.length - 1 ? 'current' : ''}" data-graph-depth="${item.depth}">${esc(item.name)}</button>`).join('');
+
+  const count = children.length;
+  const positions = count > 6
+    ? children.map((child, index) => {
+      const leftCount = Math.ceil(count / 2);
+      const left = index < leftCount;
+      const row = left ? index : index - leftCount;
+      const rows = left ? leftCount : count - leftCount;
+      return { x: left ? 16 : 84, y: 10 + ((row + 0.5) / rows) * 80 };
+    })
+    : children.map((child, index) => {
+      const angle = (-90 + index * (360 / Math.max(1, count))) * Math.PI / 180;
+      return {
+        x: 50 + Math.cos(angle) * 36,
+        y: 50 + Math.sin(angle) * 35,
+      };
+    });
+  $('#graph-links').innerHTML = positions.map((point, index) => {
+    const color = children[index].type === 'subject' ? SUBJECTS[children[index].name] : nodeColor;
+    return `<line x1="50" y1="50" x2="${point.x.toFixed(2)}" y2="${point.y.toFixed(2)}" style="--line-color:${color}"/>`;
+  }).join('');
+
+  const center = `<div class="graph-center" style="left:50%;top:50%;--node-color:${nodeColor}"><span class="graph-center-kicker">${node.type === 'root' ? 'CAMP MAP / 五科总览' : node.type === 'subject' ? 'SUBJECT / 学科' : 'BRANCH / 分支'}</span><strong>${esc(node.name)}</strong><small>${node.count} 篇资料</small></div>`;
+  const nodes = children.map((child, index) => {
+    const point = positions[index];
+    const color = child.type === 'subject' ? (SUBJECTS[child.name] || '#ffc107') : (SUBJECTS[child.subject || nodeSubject] || nodeColor);
+    if (child.type === 'doc') {
+      const entry = state.documents[child.path];
+      const reads = Number(entry?.reads) || 0;
+      return `<button class="graph-node doc ${reads ? 'read' : ''}" data-doc-path="${esc(child.path)}" style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;--node-color:${color}" title="${esc(child.title)} · ${child.badge}"><span class="graph-node-badge">${esc(child.badge)}</span><span class="graph-node-kicker">${reads ? `已通读 ${reads} 次` : '完整资料'}</span><strong>${esc(child.title)}</strong><small>${humanSize(child.size) || 'HTML'} · 打开全文</small></button>`;
+    }
+    const detail = child.children.length
+      ? `${child.children.length} 个子分支 · ${child.documents.length} 篇直属`
+      : `${child.documents.length} 篇资料`;
+    return `<button class="graph-node" data-graph-node="${esc(child.id)}" style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;--node-color:${color}" title="${esc(child.name)} · ${child.count} 篇"><span class="graph-node-badge">${child.count} 篇</span><span class="graph-node-kicker">${child.type === 'subject' ? '学科分支' : '目录分支'}</span><strong>${esc(child.name)}</strong><small>${detail} · 点击进入</small></button>`;
+  }).join('');
+  $('#graph-canvas').innerHTML = center + nodes + (children.length ? '' : '<div class="graph-node-empty">这一层已经没有更多分支。</div>');
+  const stage = $('#graph-stage');
+  stage.scrollTop = 0;
+}
+
+function navigateGraph(id) {
+  const node = currentGraphNode();
+  const next = node.children.find((child) => child.id === id);
+  if (!next) return;
+  graphTrail.push(next);
+  renderGraph();
+}
+
 async function openDocument(path) {
+  if (graphOpen) {
+    graphWasOpen = true;
+    graphOpen = false;
+    $('#graph-explorer').classList.add('hidden');
+    $('.library-shell').classList.remove('graphing');
+    const toggle = $('#toggle-graph');
+    toggle.classList.remove('active');
+    toggle.innerHTML = icon('network') + '星图';
+  }
   const doc = findDocument(path);
   if (!doc) {
     toast('没有找到这篇资料', '请重新连接资料库后再试。');
@@ -2021,6 +2251,9 @@ function closeReader() {
   $('.library-shell').classList.remove('reading');
   $('#page-library').classList.remove('reader-mode');
   renderLibrary();
+  const returnToGraph = graphWasOpen;
+  graphWasOpen = false;
+  if (returnToGraph) openGraph({ reset: false });
 }
 
 function randomDocument() {
@@ -2543,6 +2776,49 @@ function bindEvents() {
     }
     const firstUnread = [...library.documents.values()].find((doc) => !(Number(state.documents[doc.path]?.reads) > 0));
     if (firstUnread) openDocument(firstUnread.path);
+  });
+  $('#toggle-graph').addEventListener('click', () => {
+    if (graphOpen) {
+      closeGraph();
+      return;
+    }
+    if (activeDocument) closeReader();
+    if (!graphOpen) openGraph({ reset: false });
+  });
+  $('#open-graph-empty').addEventListener('click', () => openGraph({ reset: false }));
+  $('#exit-graph').addEventListener('click', closeGraph);
+  $('#graph-home').addEventListener('click', () => {
+    graphTrail = [];
+    renderGraph();
+  });
+  $('#graph-back').addEventListener('click', () => {
+    if (!graphTrail.length) return;
+    graphTrail.pop();
+    renderGraph();
+  });
+  $('#graph-breadcrumb').addEventListener('click', (event) => {
+    const crumb = event.target.closest('[data-graph-depth]');
+    if (!crumb) return;
+    const depth = Number(crumb.dataset.graphDepth);
+    graphTrail = depth < 0 ? [] : graphTrail.slice(0, depth + 1);
+    renderGraph();
+  });
+  $('#graph-canvas').addEventListener('click', (event) => {
+    const doc = event.target.closest('[data-doc-path]');
+    if (doc) {
+      openDocument(doc.dataset.docPath);
+      return;
+    }
+    const node = event.target.closest('[data-graph-node]');
+    if (node) navigateGraph(node.dataset.graphNode);
+  });
+  $('#library-subjects').addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-subject]');
+    if (!tab) return;
+    librarySubject = tab.dataset.subject;
+    const subject = library.tree.find((item) => item.name === librarySubject);
+    if (subject) expandedNodes.add(subject.id);
+    renderLibrary();
   });
   $('#random-review').addEventListener('click', randomDocument);
   $('#pick-library').addEventListener('click', chooseLibrary);

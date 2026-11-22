@@ -35,7 +35,7 @@
     <div class="metric"><small>原始脚本</small><strong>50.9K</strong><span>CHARACTERS IN ONE BLOCK</span></div>
     <div class="metric"><small>规则、目录与仓储测试</small><strong>23</strong><span>ALL PASSING</span></div>
     <div class="metric"><small>模块边界</small><strong>6+1</strong><span>DATA · ENGINE · STORE · LIBRARY · SOURCE · UI</span></div>
-    <div class="metric"><small>离线产物</small><strong>193K</strong><span>SELF-CONTAINED HTML</span></div>
+    <div class="metric"><small>离线产物</small><strong>211K</strong><span>SELF-CONTAINED HTML</span></div>
   </div>
 </div>
 
@@ -119,6 +119,7 @@ flowchart LR
   BUILD --> DIST["dist/index.html&lt;br/&gt;offline shell"]
     </pre>
     <div class="note"><strong>接口纪律：</strong> `app.js` 不知道 `awarded` 账本，`engine.js` 不知道 `document`，`storage.js` 不知道奖励规则。每一个位置只保留自己的复杂度。</div>
+    <div class="note"><strong>目录双视图：</strong> 左侧是可按科目筛选的 outline，右侧可以切换成星图。星图每次只呈现当前层与直属子节点，点击分支逐层深入；`graphTrail` 只存在于 UI，不写入学习进度，因此刷新和账号切换不会污染目录状态。</div>
   </div>
 </section>
 

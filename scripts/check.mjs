@@ -25,6 +25,9 @@ assert.match(html, /<meta name="viewport"/, 'mobile viewport metadata is require
 assert.match(html, /<title>知屿 · 暗夜学习营地<\/title>/, 'page title is missing');
 assert.ok(html.includes('id="page-library"'), 'library page is missing');
 assert.ok(html.includes('id="library-tree"'), 'hierarchical review tree is missing');
+assert.ok(html.includes('id="library-subjects"'), 'subject-separated outline tabs are missing');
+assert.ok(html.includes('id="graph-explorer"'), 'constellation graph is missing');
+assert.ok(html.includes('id="graph-canvas"'), 'constellation graph canvas is missing');
 assert.ok(html.includes('id="reader-frame"'), 'full-document reader is missing');
 assert.ok(html.includes('id="reader-progress-fill"'), 'scroll progress meter is missing');
 assert.ok(html.includes('id="hero-sprite"'), 'original character sprite is missing');
