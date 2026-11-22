@@ -1,0 +1,25 @@
+{
+  "name": "zhiyu-study-camp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local-first, gamified study camp with knowledge cards, streaks, achievements and rewards.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "verify": "npm test && npm run build && npm run check"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "study",
+    "habit-tracker",
+    "gamification",
+    "local-first",
+    "vanilla-javascript",
+    "single-file"
+  ],
+  "license": "MIT"
+}
